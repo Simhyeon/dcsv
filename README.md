@@ -1,6 +1,6 @@
 # dcsv
 
-**Dynamic csv reader and lose validater library.**
+**Dynamic csv reader, editor, and writer.**
 
 If you use structured csv data, use [csv crate](https://crates.io/crates/csv)
 
@@ -8,6 +8,8 @@ If you use structured csv data, use [csv crate](https://crates.io/crates/csv)
 
 - Read csv which has undecided format
 - Optionally validate csv values
+- Edit csv values
+- Write to file
 
 ## Usage
 
@@ -17,10 +19,10 @@ dcsv = "*"
 ```
 
 ```rust
-use dcsv::Reader;
+use dcsv::{Reader, VirtualData, Value};
 use std::fs::File;
 
-let reader = Reader::new()
+let data: VirtualData = Reader::new()
 	.use_separtor(';') // Default is comma
 	.use_line_separtor('|') // Default is semi colon
 	.read_from(
@@ -28,6 +30,9 @@ let reader = Reader::new()
 			.expect("Failed to read file")
 			)
 	.expect("Failed to retrieve csv value from file");
+
+// Refer docs.rs for various VirtualData methods
+let value : Option<&Value> = data.get_cell(1,1).expect("Failed to get cell");
 ```
 
 ## Why?
