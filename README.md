@@ -1,6 +1,6 @@
 # dcsv
 
-**Dynamic csv reader, editor, and writer.**
+Dynamic csv reader, editor, and writer library.
 
 If you use structured csv data, use [csv crate](https://crates.io/crates/csv)
 
