@@ -21,6 +21,11 @@ impl Reader {
         }
     }
 
+    pub fn has_header(mut self, has_header: bool) -> Self {
+        self.read_header = has_header;
+        self
+    }
+
     /// Read csv value from buf read stream
     ///
     /// This return read value as virtual data struct
@@ -36,7 +41,6 @@ impl Reader {
                 )));
             }
             let header = utils::csv_row_from_split(header.as_ref(), self.delimiter)?.ok_or(DcsvError::InvalidRowData("Given row data is not valid".to_string()))?;
-            println!("HEADER : {:?}", header);
             self.add_multiple_columns(&header)?;
         }
 
@@ -50,6 +54,12 @@ impl Reader {
             // and it is impossible to deduce the length of row before reading it.
             if !self.read_header {
                 self.add_multiple_columns(&self.make_arbitrary_column(split.len()))?;
+            }
+
+            // This is a trailing value after new line
+            // Simply break
+            if split.len() == 1 && (split[0] == "\n" || split[0] == "\r\n" ) {
+                break;
             }
 
             // Given row data has different length with column

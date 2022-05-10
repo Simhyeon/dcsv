@@ -5,6 +5,22 @@
 * [x] Make drop-in replacement for current ced's implementation
 * [ ] Make virtual data's api more ergonomic for library usage
 * [ ] Test various formats of csv data
+* [ ] Currently valuelimiter only get's vector which is not necessarily a great idea.
+	* [ ] Add new method from\_str for value limiter
+
+* [ ] There are three types of limiters
+	- Schmea
+	- Limiter
+	- Preset
+	Theses limiters need global way to parse
+	Maybe make a ParsedCsv Struct?
+	Or simply provide different method that skips last word?
+
+
+e.g.) -> Name can change of course
+pub struct ParsedCsv {
+	
+}
 
 ## How csv reader is different from ced?
 

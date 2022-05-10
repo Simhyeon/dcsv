@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::{error::{DcsvError, DcsvResult}, utils};
+use crate::error::{DcsvError, DcsvResult};
 use regex::Regex;
 
 pub const LIMITER_ATTRIBUTE_LEN: usize = 4;
