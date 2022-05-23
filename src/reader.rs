@@ -34,6 +34,7 @@ impl Reader {
 
         let mut row_count = 1;
         if self.read_header {
+            println!("HAS HEADERS");
             let header = csv_lines.next();
             if let None = header {
                 return Err(DcsvError::InvalidRowData(format!(
@@ -52,7 +53,8 @@ impl Reader {
             // This has to be inside row read loop 
             // because column should have same length with row
             // and it is impossible to deduce the length of row before reading it.
-            if !self.read_header {
+            if !self.read_header && self.data.get_column_count() == 0 {
+                println!("{:?}",&self.make_arbitrary_column(split.len()));
                 self.add_multiple_columns(&self.make_arbitrary_column(split.len()))?;
             }
 
