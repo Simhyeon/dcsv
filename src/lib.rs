@@ -1,5 +1,6 @@
 pub mod utils;
 mod reader;
+mod parser;
 mod error;
 mod value;
 mod virtual_data;
