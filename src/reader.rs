@@ -1,12 +1,13 @@
 use crate::error::{DcsvError, DcsvResult};
 use crate::parser::Parser;
-use crate::utils::{self, ALPHABET};
+use crate::utils::ALPHABET;
 use crate::value::{Value, ValueType};
 use crate::virtual_data::VirtualData;
 use std::io::BufRead;
 
 pub struct Reader {
     option: ReaderOption,
+    parser: Parser,
     pub data: VirtualData,
 }
 
@@ -14,8 +15,15 @@ impl Reader {
     pub fn new() -> Self {
         Self {
             option: ReaderOption::new(),
+            parser: Parser::new(),
             data: VirtualData::new(),
         }
+    }
+
+    /// Set line delimiter
+    pub fn line_delimiter(mut self, delim: char) -> Self {
+        self.parser.line_delimiter.replace(delim);
+        self
     }
 
     /// Ignore empty row
@@ -38,7 +46,7 @@ impl Reader {
     pub fn read_from_stream(&mut self, mut csv_stream: impl BufRead) -> DcsvResult<VirtualData> {
         let mut row_buffer: Vec<u8> = vec![];
         let line_delimiter = self.option.line_delimiter.unwrap_or('\n') as u8;
-        let mut parser = Parser::new();
+        self.parser.reset();
 
         let mut num_bytes = csv_stream
             .read_until(line_delimiter, &mut row_buffer)
@@ -47,7 +55,7 @@ impl Reader {
         while num_bytes != 0 {
             // Create column
             // Create row or continue to next line.
-            let row = parser.feed_chunk(
+            let row = self.parser.feed_chunk(
                 std::mem::replace(&mut row_buffer, vec![]),
                 self.option.delimiter,
             )?;

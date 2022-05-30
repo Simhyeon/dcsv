@@ -1,10 +1,10 @@
 use crate::error::DcsvResult;
 
 pub struct Parser {
-    container: Vec<String>,
-    remnant: String,
-    on_quote: bool,
-    line_delimiter: Option<char>,
+    pub(crate) container: Vec<String>,
+    pub(crate) remnant: String,
+    pub(crate) on_quote: bool,
+    pub(crate) line_delimiter: Option<char>,
 }
 
 impl Parser {
@@ -17,9 +17,10 @@ impl Parser {
         }
     }
 
-    pub fn line_delimiter(mut self, delim: char) -> Self {
-        self.line_delimiter.replace(delim);
-        self
+    pub fn reset(&mut self) {
+        self.container.clear();
+        self.remnant = String::new();
+        self.on_quote = false;
     }
 
     pub fn feed_chunk(
