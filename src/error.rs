@@ -17,19 +17,21 @@ pub enum DcsvError {
 impl std::fmt::Display for DcsvError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::InvalidLimiter(txt) => write!(f,"ERR : Invalid limiter =\n{0}",txt),
-            Self::InvalidValueType(txt) => write!(f,"ERR : Invalid type =\n{0}",txt),
-            Self::IoError(io_error) => write!(f,"ERR : IO Error =\n{0}",io_error),
-            Self::OutOfRangeError => write!(f,"ERR : Index out of range"),
-            Self::InsufficientRowData => write!(f,"ERR : Insufficient row data"),
-            Self::InvalidRowData(txt) => write!(f,"ERR : Invalid row data =\n{0}",txt),
-            Self::InvalidColumn(txt) => write!(f,"ERR : Invalid column =\n{0}",txt),
-            Self::InvalidCellData(txt) => write!(f,"ERR : Invalid cell data =\n{0}",txt),
-            Self::CommandError(txt) => write!(f,"ERR : Invalid command call =\n{0}",txt),
-            Self::InvalidPageOperation(txt) => write!(f,"ERR : Invalid page operation =\n{0}",txt),
+            Self::InvalidLimiter(txt) => write!(f, "ERR : Invalid limiter =\n{0}", txt),
+            Self::InvalidValueType(txt) => write!(f, "ERR : Invalid type =\n{0}", txt),
+            Self::IoError(io_error) => write!(f, "ERR : IO Error =\n{0}", io_error),
+            Self::OutOfRangeError => write!(f, "ERR : Index out of range"),
+            Self::InsufficientRowData => write!(f, "ERR : Insufficient row data"),
+            Self::InvalidRowData(txt) => write!(f, "ERR : Invalid row data =\n{0}", txt),
+            Self::InvalidColumn(txt) => write!(f, "ERR : Invalid column =\n{0}", txt),
+            Self::InvalidCellData(txt) => write!(f, "ERR : Invalid cell data =\n{0}", txt),
+            Self::CommandError(txt) => write!(f, "ERR : Invalid command call =\n{0}", txt),
+            Self::InvalidPageOperation(txt) => {
+                write!(f, "ERR : Invalid page operation =\n{0}", txt)
+            }
         }
     }
-} 
+}
 
 impl DcsvError {
     pub fn io_error(err: std::io::Error, meta: &str) -> Self {
@@ -62,4 +64,3 @@ impl std::fmt::Display for IoErrorWithMeta {
         write!(f, "{} :: {}", self.error, self.meta)
     }
 }
-

@@ -1,13 +1,13 @@
-use crate::value::{ValueType, Value};
-use crate::virtual_data::VirtualData;
-use crate::error::{DcsvResult, DcsvError};
+use crate::error::{DcsvError, DcsvResult};
 use crate::parser::Parser;
-use std::io::BufRead;
 use crate::utils::{self, ALPHABET};
+use crate::value::{Value, ValueType};
+use crate::virtual_data::VirtualData;
+use std::io::BufRead;
 
 pub struct Reader {
     option: ReaderOption,
-    pub data : VirtualData,
+    pub data: VirtualData,
 }
 
 impl Reader {
@@ -41,17 +41,19 @@ impl Reader {
         let mut parser = Parser::new();
 
         let mut num_bytes = csv_stream
-                .read_until(line_delimiter, &mut row_buffer)
-                .expect("Failed to read until");
+            .read_until(line_delimiter, &mut row_buffer)
+            .expect("Failed to read until");
         let mut row_count = 1;
         while num_bytes != 0 {
             // Create column
             // Create row or continue to next line.
-            let row = parser.feed_chunk(std::mem::replace(&mut row_buffer,vec![]), self.option.delimiter)?;
+            let row = parser.feed_chunk(
+                std::mem::replace(&mut row_buffer, vec![]),
+                self.option.delimiter,
+            )?;
 
             // Row has been detected
             if let Some(row) = row {
-
                 // This is a trailing value after new line
                 // Simply break
                 if row.len() == 1 && row[0].trim().is_empty() {
@@ -89,8 +91,8 @@ impl Reader {
                 if row.len() != self.data.get_column_count() {
                     self.data.drop();
                     return Err(DcsvError::InvalidRowData(format!(
-                                "Row of line \"{}\" has different length.",
-                                row_count + 1
+                        "Row of line \"{}\" has different length.",
+                        row_count + 1
                     )));
                 }
 
@@ -125,19 +127,21 @@ impl Reader {
     // DRY Codes
 
     fn add_row_fast(&mut self, row: &Vec<String>) -> DcsvResult<()> {
-        self.data.insert_row(self.data.get_row_count(), Some(&row.iter().map(|val| Value::Text(val.to_string())).collect::<Vec<_>>()))?;
+        self.data.insert_row(
+            self.data.get_row_count(),
+            Some(
+                &row.iter()
+                    .map(|val| Value::Text(val.to_string()))
+                    .collect::<Vec<_>>(),
+            ),
+        )?;
         Ok(())
     }
 
-    fn add_multiple_columns(&mut self, column_names : &Vec<String>) -> DcsvResult<()> {
+    fn add_multiple_columns(&mut self, column_names: &Vec<String>) -> DcsvResult<()> {
         for (idx, col) in column_names.iter().enumerate() {
-            self.data.insert_column(
-                idx,
-                col,
-                ValueType::Text,
-                None, 
-                None
-            )?;
+            self.data
+                .insert_column(idx, col, ValueType::Text, None, None)?;
         }
         Ok(())
     }
@@ -154,23 +158,21 @@ impl Reader {
     }
 }
 
-
 /// Reader behaviour related options
 pub(crate) struct ReaderOption {
     pub(crate) read_header: bool,
-    pub(crate) delimiter : Option<char>,
+    pub(crate) delimiter: Option<char>,
     pub(crate) line_delimiter: Option<char>,
     pub(crate) ignore_empty_row: bool,
 }
 
 impl ReaderOption {
     pub fn new() -> Self {
-        Self { 
+        Self {
             read_header: true,
-            delimiter : None,
-            line_delimiter : None,
+            delimiter: None,
+            line_delimiter: None,
             ignore_empty_row: false,
         }
     }
 }
-

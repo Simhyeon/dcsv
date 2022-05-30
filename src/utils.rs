@@ -8,16 +8,23 @@ pub(crate) const ALPHABET: [&str; 26] = [
 /// Try getting csv row from split iterator
 ///
 /// This will retur None when fails to get csv row
-pub fn csv_row_from_split(split: Option<&std::io::Result<Vec<u8>>>, delimiter: Option<char>) -> DcsvResult<Option<Vec<String>>> {
-    let split = split.map(|value| {
-        if let Ok(value) = value {
-            let src = std::str::from_utf8(&value);
-            match src {
-                Err(_) => None,
-                Ok(src) => Some(csv_row_to_vector(src, delimiter))
+pub fn csv_row_from_split(
+    split: Option<&std::io::Result<Vec<u8>>>,
+    delimiter: Option<char>,
+) -> DcsvResult<Option<Vec<String>>> {
+    let split = split
+        .map(|value| {
+            if let Ok(value) = value {
+                let src = std::str::from_utf8(&value);
+                match src {
+                    Err(_) => None,
+                    Ok(src) => Some(csv_row_to_vector(src, delimiter)),
+                }
+            } else {
+                None
             }
-        } else { None }
-    }).unwrap_or(None);
+        })
+        .unwrap_or(None);
     Ok(split)
 }
 
@@ -35,13 +42,13 @@ pub fn csv_row_to_vector(line: &str, delimiter: Option<char>) -> Vec<String> {
                 if previous == '"' {
                     previous = ' '; // Reset previous
                 } else {
-                    if let Some('"') = iter.peek() { }
-                    else {
+                    if let Some('"') = iter.peek() {
+                    } else {
                         on_quote = !on_quote;
                     }
                     previous = ch;
                 }
-            },
+            }
             // This looks verbose but needs match guard
             // because match pattern doesn't work like what starters think
             _ if ch == delimiter.unwrap_or(',') => {
@@ -51,7 +58,7 @@ pub fn csv_row_to_vector(line: &str, delimiter: Option<char>) -> Vec<String> {
                     previous = ch;
                     continue;
                 }
-            },
+            }
             _ => previous = ch,
         }
         chunk.push(ch);

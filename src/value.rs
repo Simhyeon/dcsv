@@ -67,38 +67,38 @@ pub struct ValueLimiter {
 
 impl Display for ValueLimiter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f,"type : {}\n", self.value_type)?;
-        if let Some(var) = &self.variant{
-            write!(f,"default value : {:?}\n", &var)?;
+        write!(f, "type : {}\n", self.value_type)?;
+        if let Some(var) = &self.variant {
+            write!(f, "default value : {:?}\n", &var)?;
         }
         if let Some(var) = &self.variant {
-            write!(f,"variants : {:?}", var)
+            write!(f, "variants : {:?}", var)
         } else if let Some(var) = &self.pattern {
-            write!(f,"pattern : {:?}", var)
+            write!(f, "pattern : {:?}", var)
         } else {
-            write!(f,"")
+            write!(f, "")
         }
     }
 }
 
 impl ValueLimiter {
-    pub fn is_convertible(&self, value:&Value) -> Option<ValueType> {
+    pub fn is_convertible(&self, value: &Value) -> Option<ValueType> {
         // TODO
         // Only when value type matches limiter's type
         match self.value_type {
             ValueType::Number => {
-                if let Value::Text(text) = value { // String to Number
+                if let Value::Text(text) = value {
+                    // String to Number
                     match text.parse::<isize>() {
                         Ok(_) => Some(ValueType::Number),
                         Err(_) => None,
                     }
-                } else { // Number to number
+                } else {
+                    // Number to number
                     Some(ValueType::Number)
                 }
             }
-            ValueType::Text => {
-                Some(ValueType::Text)
-            }
+            ValueType::Text => Some(ValueType::Text),
         }
     }
 
@@ -130,7 +130,7 @@ impl ValueLimiter {
 
     /// Create value limiter from attributes
     ///
-    /// The order is 
+    /// The order is
     /// - Type
     /// - Default
     /// - Variant
@@ -170,9 +170,12 @@ impl ValueLimiter {
             } else {
                 limiter.default = Some(default);
             }
-        } else { // Default is empty
+        } else {
+            // Default is empty
             if !pattern.is_empty() || !variants.is_empty() {
-                return Err(DcsvError::InvalidLimiter(format!("Either pattern or variants needs default value to be valid")));
+                return Err(DcsvError::InvalidLimiter(format!(
+                    "Either pattern or variants needs default value to be valid"
+                )));
             }
         }
         Ok(limiter)
