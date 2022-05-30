@@ -1,3 +1,11 @@
+## DONE
+
+* [x] Fixed a bug where arbitrary column was infinitely added, at least the
+program tried but failed of course.
+* [x] Added a new option for ignore empty row.
+* [x] Support complete spec of csv values : Kind of?
+	* [x] newline inside double quotes are allowed... For real...
+
 ## TODO
 
 * [x] Add internal **read from bytestream** method for virtual data.
@@ -5,22 +13,6 @@
 * [x] Make drop-in replacement for current ced's implementation
 * [ ] Make virtual data's api more ergonomic for library usage
 * [ ] Test various formats of csv data
-* [ ] Currently valuelimiter only get's vector which is not necessarily a great idea.
-	* [ ] Add new method from\_str for value limiter
-
-* [ ] There are three types of limiters
-	- Schmea
-	- Limiter
-	- Preset
-	Theses limiters need global way to parse
-	Maybe make a ParsedCsv Struct?
-	Or simply provide different method that skips last word?
-
-
-e.g.) -> Name can change of course
-pub struct ParsedCsv {
-	
-}
 
 ## How csv reader is different from ced?
 

@@ -47,3 +47,7 @@ See the examples for usages.
 
 - [CSV editor](https://github.com/simhyeon/ced)
 - [CSV raw query](https://github.com/simhyeon/cindex)
+
+## Not yet
+
+- Fully comptaible with csv spec
