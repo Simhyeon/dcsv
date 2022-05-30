@@ -21,8 +21,8 @@ impl Reader {
     /// Ignore empty row
     ///
     /// This prevents reader from panicking on empty row.
-    pub fn ignore_empty_row(mut self, ignore_newline: bool) -> Self {
-        self.option.ignore_empty_row = ignore_newline;
+    pub fn ignore_empty_row(mut self, tv: bool) -> Self {
+        self.option.ignore_empty_row = tv;
         self
     }
 
@@ -51,6 +51,7 @@ impl Reader {
 
             // Row has been detected
             if let Some(row) = row {
+
                 // This is a trailing value after new line
                 // Simply break
                 if row.len() == 1 && row[0].trim().is_empty() {
@@ -83,7 +84,6 @@ impl Reader {
                         self.add_multiple_columns(&self.make_arbitrary_column(row.len()))?;
                     }
                 }
-
 
                 // Given row data has different length with column
                 if row.len() != self.data.get_column_count() {
