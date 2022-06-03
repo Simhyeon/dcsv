@@ -20,12 +20,6 @@ impl Reader {
         }
     }
 
-    /// Set line delimiter
-    pub fn line_delimiter(mut self, delim: char) -> Self {
-        self.parser.line_delimiter.replace(delim);
-        self
-    }
-
     /// Ignore empty row
     ///
     /// This prevents reader from panicking on empty row.
@@ -127,6 +121,7 @@ impl Reader {
 
     /// Use line delimiter instead of default one : "\n".
     pub fn use_line_delimiter(mut self, delimiter: char) -> Self {
+        self.parser.line_delimiter.replace(delimiter);
         self.option.line_delimiter.replace(delimiter);
         self
     }
