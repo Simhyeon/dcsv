@@ -165,6 +165,9 @@ impl VirtualData {
 
     /// Rename column
     pub fn rename_column(&mut self, column: &str, new_name: &str) -> DcsvResult<()> {
+        if let Ok(_) = new_name.parse::<f64>() {
+            return Err(DcsvError::InvalidColumn(format!("Given invalid column name, \"{new_name}\" which is a number")));
+        }
         let column_index = self.try_get_column_index(column);
 
         if let None = column_index {
@@ -679,6 +682,13 @@ impl Row {
             match v {
                 Value::Text(t) => {
                     if target_type == ValueType::Number {
+
+                        // Empty text value can be evaluted to 0 value number
+                        if t.is_empty() {
+                            *v = Value::Number(0);
+                            return Ok(());
+                        }
+
                         *v = Value::Number(t.parse::<isize>().map_err(|_| {
                             DcsvError::InvalidCellData(format!(
                                 "\"{}\" is not a valid value to be converted to type : \"{}\"",

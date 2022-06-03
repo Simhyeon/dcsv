@@ -21,6 +21,11 @@ impl Value {
     pub fn from_str(src: &str, value_type: ValueType) -> DcsvResult<Self> {
         Ok(match value_type {
             ValueType::Number => {
+                // Empty value is evaluated to 0
+                if src.is_empty() {
+                    return Ok(Value::Number(0));
+                }
+
                 let src_number = src.parse::<isize>().map_err(|_| {
                     DcsvError::InvalidValueType(format!("\"{}\" is not a valid number", src))
                 })?;
@@ -88,6 +93,12 @@ impl ValueLimiter {
         match self.value_type {
             ValueType::Number => {
                 if let Value::Text(text) = value {
+
+                    // Empty value can be converted to 0 without hassle
+                    if text.is_empty() {
+                        return Some(ValueType::Number);
+                    }
+
                     // String to Number
                     match text.parse::<isize>() {
                         Ok(_) => Some(ValueType::Number),
