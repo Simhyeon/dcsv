@@ -5,6 +5,8 @@ program tried but failed of course.
 * [x] Added a new option for ignore empty row.
 * [x] Support complete spec of csv values : Kind of?
 	* [x] newline inside double quotes are allowed... For real...
+* [x] Fixed missing parser option for custom line ending
+* [x] Made rename-column doesn't let number column for sanity
 
 ## TODO
 

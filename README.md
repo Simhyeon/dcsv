@@ -23,13 +23,13 @@ use dcsv::{Reader, VirtualData, Value};
 use std::fs::File;
 
 let data: VirtualData = Reader::new()
-	.use_separtor(';') // Default is comma
-	.use_line_separtor('|') // Default is semi colon
-	.read_from(
-			File::open("file_name.csv")
-			.expect("Failed to read file")
-			)
-	.expect("Failed to retrieve csv value from file");
+    .use_separtor(';') // Default is comma
+    .use_line_separtor('|') // Default is '\n, \r\n'
+    .read_from(
+        File::open("file_name.csv")
+            .expect("Failed to read file")
+    )
+    .expect("Failed to retrieve csv value from file");
 
 // Refer docs.rs for various VirtualData methods
 let value : Option<&Value> = data.get_cell(1,1).expect("Failed to get cell");
