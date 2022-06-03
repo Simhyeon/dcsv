@@ -93,7 +93,6 @@ impl ValueLimiter {
         match self.value_type {
             ValueType::Number => {
                 if let Value::Text(text) = value {
-
                     // Empty value can be converted to 0 without hassle
                     if text.is_empty() {
                         return Some(ValueType::Number);
