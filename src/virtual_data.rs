@@ -11,52 +11,22 @@ pub struct VirtualData {
     pub rows: Vec<Row>,
 }
 
-/// to_string implementation for virtual data
-///
-/// This returns csv value string
-impl std::fmt::Display for VirtualData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut csv_src = String::new();
-        let column_row = self
-            .columns
-            .iter()
-            .map(|c| c.name.as_str())
-            .collect::<Vec<&str>>()
-            .join(",")
-            + "\n";
-        csv_src.push_str(&column_row);
-
-        let columns = self
-            .columns
-            .iter()
-            .map(|col| col.name.as_str())
-            .collect::<Vec<&str>>();
-        for row in &self.rows {
-            let row_value = columns
-                .iter()
-                .map(|name| {
-                    row.get_cell_value(name)
-                        .unwrap_or(&Value::Text(String::new()))
-                        .to_string()
-                })
-                .collect::<Vec<String>>()
-                .join(",")
-                + "\n";
-
-            csv_src.push_str(&row_value);
-        }
-        // Remove trailing newline
-        csv_src.pop();
-        write!(f, "{}", csv_src)
-    }
-}
-
 impl VirtualData {
     pub fn new() -> Self {
         Self {
             columns: vec![],
             rows: vec![],
         }
+    }
+
+    /// Get readly only data from virtual data
+    pub fn read_only(&self) -> ReadOnlyData {
+        ReadOnlyData::from(self)
+    }
+
+    /// Get readly only data from virtual data buf as reference
+    pub fn read_only_ref(&self) -> ReadOnlyDataRef {
+        ReadOnlyDataRef::from(self)
     }
 
     /// Set cell's value with given string value
@@ -595,6 +565,46 @@ impl VirtualData {
     // </EXT>
 }
 
+/// to_string implementation for virtual data
+///
+/// This returns csv value string
+impl std::fmt::Display for VirtualData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut csv_src = String::new();
+        let column_row = self
+            .columns
+            .iter()
+            .map(|c| c.name.as_str())
+            .collect::<Vec<&str>>()
+            .join(",")
+            + "\n";
+        csv_src.push_str(&column_row);
+
+        let columns = self
+            .columns
+            .iter()
+            .map(|col| col.name.as_str())
+            .collect::<Vec<&str>>();
+        for row in &self.rows {
+            let row_value = columns
+                .iter()
+                .map(|name| {
+                    row.get_cell_value(name)
+                        .unwrap_or(&Value::Text(String::new()))
+                        .to_string()
+                })
+                .collect::<Vec<String>>()
+                .join(",")
+                + "\n";
+
+            csv_src.push_str(&row_value);
+        }
+        // Remove trailing newline
+        csv_src.pop();
+        write!(f, "{}", csv_src)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Column {
     pub name: String,
@@ -733,5 +743,65 @@ impl Row {
 
     pub fn remove_cell(&mut self, key: &str) {
         self.values.remove(key);
+    }
+}
+
+/// Read only data
+///
+/// Columns and rows are all simple string container
+pub struct ReadOnlyData {
+    pub columns: Vec<String>,
+    pub rows: Vec<Vec<Value>>,
+}
+
+impl From<&VirtualData> for ReadOnlyData {
+    fn from(data: &VirtualData) -> Self {
+        let mut rows: Vec<Vec<Value>> = vec![];
+        for row in &data.rows {
+            let mut static_row: Vec<Value> = vec![];
+            for col in &data.columns {
+                static_row.push(row.get_cell_value(&col.name).unwrap().clone())
+            }
+            rows.push(static_row);
+        }
+        Self {
+            columns: data.columns.iter().map(|c| c.name.clone()).collect(),
+            rows,
+        }
+    }
+}
+
+pub struct ReadOnlyDataRef<'data> {
+    pub columns: Vec<&'data str>,
+    pub rows: Vec<Vec<&'data Value>>,
+}
+
+impl<'data> ReadOnlyDataRef<'data> {
+    pub fn to_owned(&self) -> ReadOnlyData {
+        ReadOnlyData {
+            columns: self.columns.iter().map(|c| c.to_string()).collect(),
+            rows: self
+                .rows
+                .iter()
+                .map(|vv| vv.iter().map(|&v| v.clone()).collect::<Vec<_>>())
+                .collect::<Vec<Vec<_>>>(),
+        }
+    }
+}
+
+impl<'data> From<&'data VirtualData> for ReadOnlyDataRef<'data> {
+    fn from(data: &'data VirtualData) -> Self {
+        let mut rows: Vec<Vec<&'data Value>> = vec![];
+        for row in &data.rows {
+            let mut static_row: Vec<&'data Value> = vec![];
+            for col in &data.columns {
+                static_row.push(row.get_cell_value(&col.name).unwrap())
+            }
+            rows.push(static_row);
+        }
+        Self {
+            columns: data.columns.iter().map(|c| c.name.as_str()).collect(),
+            rows,
+        }
     }
 }
