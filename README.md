@@ -4,6 +4,10 @@ Dynamic csv reader, editor, and writer library.
 
 If you use structured csv data, use [csv crate](https://crates.io/crates/csv)
 
+### Change
+
+[changes](./docs/change.md)
+
 ## Feature
 
 - Read csv which has undecided format
@@ -23,11 +27,13 @@ use dcsv::{Reader, VirtualData, Value};
 use std::fs::File;
 
 let data: VirtualData = Reader::new()
-    .use_separtor(';') // Default is comma
-    .use_line_separtor('|') // Default is '\n, \r\n'
-    .read_from(
-        File::open("file_name.csv")
-            .expect("Failed to read file")
+    .use_delimiter(';')      // Default is comma
+    .use_line_delimiter('|') // Default is '\n, \r\n'
+    .read_from_stream(
+        BufReader::new(
+            File::open("file_name.csv")
+                .expect("Failed to read file")
+        )
     )
     .expect("Failed to retrieve csv value from file");
 
