@@ -164,6 +164,8 @@ impl VirtualData {
     }
 
     /// Rename column
+    ///
+    /// Column cannot be a number or exsiting one
     pub fn rename_column(&mut self, column: &str, new_name: &str) -> DcsvResult<()> {
         if let Ok(_) = new_name.parse::<f64>() {
             return Err(DcsvError::InvalidColumn(format!(
@@ -171,9 +173,17 @@ impl VirtualData {
             )));
         }
         let column_index = self.try_get_column_index(column);
+        let next_column_index = self.try_get_column_index(new_name);
 
         if let None = column_index {
             return Err(DcsvError::OutOfRangeError);
+        }
+
+        if let Some(_) = next_column_index {
+            return Err(DcsvError::InvalidColumn(format!(
+                "Cannot rename to \"{}\" which already exists",
+                &new_name
+            )));
         }
 
         let previous = self.columns[column_index.unwrap()].rename(new_name);
@@ -186,6 +196,7 @@ impl VirtualData {
     // TODO
     // 1. Check limiter
     // 2. Check if value exists
+    /// Set values to a column
     pub fn set_column(&mut self, column: &str, value: Value) -> DcsvResult<()> {
         let column_index = self.try_get_column_index(column);
         if let None = column_index {
@@ -198,7 +209,7 @@ impl VirtualData {
         Ok(())
     }
 
-    /// Edit row
+    /// Edit a row
     ///
     /// Only edit row's cell when value is not none
     pub fn edit_row(
@@ -246,6 +257,7 @@ impl VirtualData {
     // TODO
     // 1. Check limiter
     // 2. Check if value exists
+    /// Set values to a row
     pub fn set_row(&mut self, row_number: usize, values: Vec<Value>) -> DcsvResult<()> {
         // Row's value doesn't match length of columns
         if values.len() != self.get_column_count() {
@@ -287,7 +299,7 @@ impl VirtualData {
         Ok(value)
     }
 
-    /// Set cell by coordinate
+    /// Set cell value by coordinate
     pub fn set_cell(&mut self, x: usize, y: usize, value: Value) -> DcsvResult<()> {
         let name = self.get_column_if_valid(x, y)?.name.to_owned();
 
@@ -298,6 +310,9 @@ impl VirtualData {
     }
 
     // THis should insert row with given column limiters
+    /// Insert a row to given number
+    ///
+    /// This can yield out of rnage error
     pub fn insert_row(&mut self, row_number: usize, source: Option<&Vec<Value>>) -> DcsvResult<()> {
         if row_number > self.get_row_count() {
             return Err(DcsvError::InvalidColumn(format!(
@@ -329,14 +344,18 @@ impl VirtualData {
         Ok(())
     }
 
-    pub fn delete_row(&mut self, row: usize) -> Option<Row> {
+    /// Delete a row with given row_number
+    ///
+    /// This doesn't fail but silent do nothing if number is out of range
+    pub fn delete_row(&mut self, row_number: usize) -> Option<Row> {
         let row_count = self.get_row_count();
-        if row_count == 0 || row_count < row {
+        if row_count == 0 || row_count < row_number {
             return None;
         }
-        Some(self.rows.remove(row))
+        Some(self.rows.remove(row_number))
     }
 
+    /// Insert a column with given column information
     pub fn insert_column(
         &mut self,
         column_number: usize,
@@ -353,7 +372,8 @@ impl VirtualData {
         }
         if let Some(_) = self.try_get_column_index(column_name) {
             return Err(DcsvError::InvalidColumn(format!(
-                "Cannot add existing column or number named column"
+                "Cannot add existing column or number named column = \"{}\"",
+                column_name
             )));
         }
         if let Ok(_) = column_name.parse::<isize>() {
@@ -373,14 +393,15 @@ impl VirtualData {
         Ok(())
     }
 
-    pub fn delete_column(&mut self, column: usize) -> DcsvResult<()> {
-        let name = self.get_column_if_valid(0, column)?.name.to_owned();
+    /// Delete a column with given index
+    pub fn delete_column(&mut self, column_number: usize) -> DcsvResult<()> {
+        let name = self.get_column_if_valid(0, column_number)?.name.to_owned();
 
         for row in &mut self.rows {
             row.remove_cell(&name);
         }
 
-        self.columns.remove(column);
+        self.columns.remove(column_number);
 
         // If column is empty, drop all rows
         if self.get_column_count() == 0 {
@@ -390,6 +411,7 @@ impl VirtualData {
         Ok(())
     }
 
+    /// Set a limiter to a column
     pub fn set_limiter(
         &mut self,
         column: usize,
@@ -480,7 +502,7 @@ impl VirtualData {
     }
 
     // <DRY>
-    /// Get column index from src
+    /// Get a column index from src
     ///
     /// Src can be either colum name or column index
     /// If colum index is out of range, it returns none
@@ -498,6 +520,7 @@ impl VirtualData {
         column_index
     }
 
+    /// Check if cell coordinate is not out of range
     fn is_valid_cell_coordinate(&self, x: usize, y: usize) -> bool {
         if x < self.get_row_count() {
             if y < self.get_column_count() {
@@ -563,7 +586,7 @@ impl VirtualData {
         self.columns.len()
     }
 
-    /// Drop all data
+    /// Drop all data from self
     pub fn drop(&mut self) {
         self.columns.clear();
         self.rows.clear();
