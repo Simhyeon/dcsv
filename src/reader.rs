@@ -5,6 +5,10 @@ use crate::value::{Value, ValueType};
 use crate::virtual_data::VirtualData;
 use std::io::BufRead;
 
+/// Csv Reader
+///
+/// User can set various reader option to configure a reading behaviour.
+/// Reader's options are not dropped after a read but persists for reader's lifetime.
 pub struct Reader {
     option: ReaderOption,
     parser: Parser,
@@ -25,6 +29,12 @@ impl Reader {
     /// This prevents reader from panicking on empty row.
     pub fn ignore_empty_row(mut self, tv: bool) -> Self {
         self.option.ignore_empty_row = tv;
+        self
+    }
+
+    /// Trim all values
+    pub fn trim(mut self, tv: bool) -> Self {
+        self.option.trim = tv;
         self
     }
 
@@ -77,7 +87,11 @@ impl Reader {
                 // Add column header if column is empty
                 if self.data.get_column_count() == 0 {
                     if self.option.read_header {
-                        self.add_multiple_columns(&row)?;
+                        if self.option.trim {
+                            self.add_multiple_columns_ref(&row.iter().map(|s| s.trim()).collect())?;
+                        } else {
+                            self.add_multiple_columns(&row)?;
+                        }
                         row_count += 1;
                         num_bytes = csv_stream
                             .read_until(line_delimiter, &mut row_buffer)
@@ -98,8 +112,12 @@ impl Reader {
                     )));
                 }
 
-                // Add as new row and proceed
-                self.add_row_fast(&row)?;
+                if self.option.trim {
+                    self.add_row_fast_ref(&row.iter().map(|s| s.trim()).collect())?;
+                } else {
+                    // Add as new row and proceed
+                    self.add_row_fast(&row)?;
+                }
             }
 
             // advance row
@@ -128,7 +146,6 @@ impl Reader {
 
     // <DRY>
     // DRY Codes
-
     fn add_row_fast(&mut self, row: &Vec<String>) -> DcsvResult<()> {
         self.data.insert_row(
             self.data.get_row_count(),
@@ -141,7 +158,29 @@ impl Reader {
         Ok(())
     }
 
+    // The reason there is no &Vec<impl AsRef<str>> is because
+    // dcsv is heavily library based crate, and I don't want to generic as much as possible
+    fn add_row_fast_ref(&mut self, row: &Vec<&str>) -> DcsvResult<()> {
+        self.data.insert_row(
+            self.data.get_row_count(),
+            Some(
+                &row.iter()
+                    .map(|val| Value::Text(val.to_string()))
+                    .collect::<Vec<_>>(),
+            ),
+        )?;
+        Ok(())
+    }
+
     fn add_multiple_columns(&mut self, column_names: &Vec<String>) -> DcsvResult<()> {
+        for (idx, col) in column_names.iter().enumerate() {
+            self.data
+                .insert_column(idx, col, ValueType::Text, None, None)?;
+        }
+        Ok(())
+    }
+
+    fn add_multiple_columns_ref(&mut self, column_names: &Vec<&str>) -> DcsvResult<()> {
         for (idx, col) in column_names.iter().enumerate() {
             self.data
                 .insert_column(idx, col, ValueType::Text, None, None)?;
@@ -163,6 +202,7 @@ impl Reader {
 
 /// Reader behaviour related options
 pub(crate) struct ReaderOption {
+    pub(crate) trim: bool,
     pub(crate) read_header: bool,
     pub(crate) delimiter: Option<char>,
     pub(crate) line_delimiter: Option<char>,
@@ -172,6 +212,7 @@ pub(crate) struct ReaderOption {
 impl ReaderOption {
     pub fn new() -> Self {
         Self {
+            trim: false,
             read_header: true,
             delimiter: None,
             line_delimiter: None,
