@@ -1,3 +1,31 @@
+/// # Dynamic csv manipulation library
+///
+/// # Basic
+///
+/// Dcsv has two major structs of Reader and VirtualData. Reader reads csv data as byte stream and
+/// return virtual data. Changes to virtual data is not linked to original source. User needs to
+/// save virtual data to desired destination.
+///
+/// ## Usage
+///
+/// ```rust
+/// use dcsv::{Reader, VirtualData, Value};
+/// use std::io::BufReader;
+/// use std::fs::File;
+///
+/// let data: VirtualData = Reader::new()
+///     .use_delimiter(';')      // Default is comma
+///     .use_line_delimiter('|') // Default is '\n, \r\n'
+///     .read_from_stream(
+///         BufReader::new(
+///             File::open("file_name.csv")
+///                 .expect("Failed to read file")
+///         )
+///     )
+///     .expect("Failed to retrieve csv value from file");
+///
+/// // Refer docs.rs for various VirtualData methods
+/// let value : Option<&Value> = data.get_cell(1,1).expect("Failed to get cell");
 mod error;
 mod parser;
 mod reader;
