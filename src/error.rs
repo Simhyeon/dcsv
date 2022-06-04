@@ -11,7 +11,6 @@ pub enum DcsvError {
     InvalidColumn(String),
     InvalidCellData(String),
     CommandError(String),
-    InvalidPageOperation(String),
 }
 
 impl std::fmt::Display for DcsvError {
@@ -26,9 +25,6 @@ impl std::fmt::Display for DcsvError {
             Self::InvalidColumn(txt) => write!(f, "ERR : Invalid column =\n{0}", txt),
             Self::InvalidCellData(txt) => write!(f, "ERR : Invalid cell data =\n{0}", txt),
             Self::CommandError(txt) => write!(f, "ERR : Invalid command call =\n{0}", txt),
-            Self::InvalidPageOperation(txt) => {
-                write!(f, "ERR : Invalid page operation =\n{0}", txt)
-            }
         }
     }
 }
