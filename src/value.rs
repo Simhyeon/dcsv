@@ -5,7 +5,12 @@ use regex::Regex;
 
 pub const LIMITER_ATTRIBUTE_LEN: usize = 4;
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+/// Basic component of virtual data
+///
+/// Value can be either number or text.
+/// - "Number" is signed interger (usize)
+/// - Text is simply any data
+#[derive(Clone, Eq, PartialEq, PartialOrd, Debug)]
 pub enum Value {
     Number(isize),
     Text(String),
@@ -18,6 +23,7 @@ impl Value {
             Self::Text(_) => ValueType::Text,
         }
     }
+    /// Convert string into value with given type
     pub fn from_str(src: &str, value_type: ValueType) -> DcsvResult<Self> {
         Ok(match value_type {
             ValueType::Number => {
@@ -35,6 +41,7 @@ impl Value {
         })
     }
 
+    /// Create empty value
     pub fn empty(value_type: ValueType) -> Self {
         match value_type {
             ValueType::Number => Self::Number(0),
@@ -61,6 +68,13 @@ impl std::fmt::Display for Value {
 
 // This struct should not expose value directly
 // because some limiters are mutually exclusive.
+/// Limiter that costraints which data that Value can hold
+///
+/// VaulueLimiter has four properties
+/// - type ( Eitehr number or text )
+/// - default value
+/// - variants ( Range of values )
+/// - pattern ( Regex pattern )
 #[derive(Default, Clone, Debug)]
 pub struct ValueLimiter {
     // Allowed variant
