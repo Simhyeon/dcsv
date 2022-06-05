@@ -11,11 +11,18 @@ mod test {
 
     #[test]
     fn read_csv() {
+        let csv = "";
         let csv_1 = r#" a , b , c ,"d,
 1"
   1  ,  2  ,  3  ,  4  "#;
         let csv_2 = "a,b,c,d\r\n1,2,3,4\r\n";
         let csv_3 = r#"a|b|c|d;1|2|3|4"#;
+        let data_0 = Reader::new()
+            .trim(true)
+            .read_from_stream(csv.as_bytes())
+            .expect("Failed to read");
+        println!("00 : {}",data_0);
+        println!("--{:?}--", data_0.read_only_ref());
         let data = Reader::new()
             .trim(true)
             .read_from_stream(csv_1.as_bytes())
