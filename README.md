@@ -6,8 +6,6 @@ If you use structured csv data, use [csv crate](https://crates.io/crates/csv)
 
 If you want higher wrapper around csv editing, use [ced](https://crates.io/crates/ced)
 
-### Change
-
 [changes](./docs/change.md)
 
 ## Feature

@@ -20,6 +20,9 @@ impl VirtualData {
     }
 
     /// Get readly only data from virtual data
+    ///
+    /// This clones every value into a ReadOnlyData. 
+    /// If the purpose is to simply iterate over values, prefer read_only_ref method.
     pub fn read_only(&self) -> ReadOnlyData {
         ReadOnlyData::from(self)
     }
@@ -660,7 +663,7 @@ impl Column {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Row {
     pub values: HashMap<String, Value>,
 }
@@ -749,6 +752,7 @@ impl Row {
 /// Read only data
 ///
 /// Columns and rows are all simple string container
+#[derive(Debug)]
 pub struct ReadOnlyData {
     pub columns: Vec<String>,
     pub rows: Vec<Vec<Value>>,
@@ -771,6 +775,7 @@ impl From<&VirtualData> for ReadOnlyData {
     }
 }
 
+#[derive(Debug)]
 pub struct ReadOnlyDataRef<'data> {
     pub columns: Vec<&'data str>,
     pub rows: Vec<Vec<&'data Value>>,

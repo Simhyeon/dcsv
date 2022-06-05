@@ -1,3 +1,7 @@
+# 0.1.4
+
+- NEW : ReadOnlyData, ReadOnlyDataRef for data iteration
+
 # 0.1.3
 
 - PartialOrd derive for "Value" struct

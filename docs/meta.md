@@ -1,8 +1,7 @@
 ## TODO
 
-* [x] PartialOrd for Value
-* [x] Docs.rs compatible documentations.
-* [x] Trim reader option
+* [x] ReadOnly Struct for better usability
+	- Records
 * [ ] Make virtual data's api more ergonomic for library usage
 * [ ] Test various formats of csv data
 
@@ -28,3 +27,6 @@ program tried but failed of course.
 * [x] Fixed missing parser option for custom line ending
 * [x] Made rename-column doesn't let number column for sanity
 
+* [x] PartialOrd for Value
+* [x] Docs.rs compatible documentations.
+* [x] Trim reader option
