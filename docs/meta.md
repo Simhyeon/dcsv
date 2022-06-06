@@ -1,7 +1,6 @@
 ## TODO
 
-* [x] ReadOnly Struct for better usability
-	- Records
+* [x] Better docs.rs documentation
 * [ ] Make virtual data's api more ergonomic for library usage
 * [ ] Test various formats of csv data
 
@@ -30,3 +29,4 @@ program tried but failed of course.
 * [x] PartialOrd for Value
 * [x] Docs.rs compatible documentations.
 * [x] Trim reader option
+* [x] ReadOnly Struct for better usability

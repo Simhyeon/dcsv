@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 pub const SCHEMA_HEADER: &str = "column,type,default,variant,pattern";
 
+/// Virtual data which contains csv information
 #[derive(Clone)]
 pub struct VirtualData {
     pub columns: Vec<Column>,
@@ -19,7 +20,7 @@ impl VirtualData {
         }
     }
 
-    /// Get readly only data from virtual data
+    /// Get read only data from virtual data
     ///
     /// This clones every value into a ReadOnlyData. 
     /// If the purpose is to simply iterate over values, prefer read_only_ref method.
@@ -27,7 +28,7 @@ impl VirtualData {
         ReadOnlyData::from(self)
     }
 
-    /// Get readly only data from virtual data buf as reference
+    /// Get read only data from virtual data, but as reference
     pub fn read_only_ref(&self) -> ReadOnlyDataRef {
         ReadOnlyDataRef::from(self)
     }
@@ -641,6 +642,11 @@ impl Column {
         self.limiter = limiter;
     }
 
+    /// Get default value by column
+    ///
+    /// Every value type has it's own default value.
+    /// The default value can differ by limiter's variant of patterns and should comply to a
+    /// limter's predicate.
     pub fn get_default_value(&self) -> Value {
         // has default
         if let Some(def) = self.limiter.get_default() {
@@ -663,6 +669,9 @@ impl Column {
     }
 }
 
+/// Row
+///
+/// Row is implementated as a hashmap. You cannot iterate row without column information.
 #[derive(Clone, Debug)]
 pub struct Row {
     pub values: HashMap<String, Value>,
@@ -675,6 +684,9 @@ impl Row {
         }
     }
 
+    /// Get comma separated row string
+    ///
+    /// This requires columns because a row is not a linear container.
     pub fn to_string(&self, columns: &Vec<Column>) -> DcsvResult<String> {
         let mut acc = String::new();
         for col in columns {
@@ -693,6 +705,10 @@ impl Row {
         Ok(acc)
     }
 
+    /// Rename column name inside row map
+    ///
+    /// This doesn't validate column's name and should comply with column name rule to avoid
+    /// unintended behaviour.
     pub fn rename_column(&mut self, name: &str, new_name: &str) {
         let previous = self.values.remove(name);
 
@@ -715,6 +731,10 @@ impl Row {
         }
     }
 
+    /// Chagnes cell's value type
+    ///
+    /// This method tries to naturally convert cell's type.
+    /// Empty text value is defaulted to 0 number.
     pub fn change_cell_type(&mut self, key: &str, target_type: ValueType) -> DcsvResult<()> {
         if let Some(v) = self.values.get_mut(key) {
             match v {
@@ -751,7 +771,7 @@ impl Row {
 
 /// Read only data
 ///
-/// Columns and rows are all simple string container
+/// This is a cloned data from virtual_data and lifetime independent
 #[derive(Debug)]
 pub struct ReadOnlyData {
     pub columns: Vec<String>,
@@ -775,6 +795,7 @@ impl From<&VirtualData> for ReadOnlyData {
     }
 }
 
+/// Borrowed data from virtual data
 #[derive(Debug)]
 pub struct ReadOnlyDataRef<'data> {
     pub columns: Vec<&'data str>,
@@ -782,6 +803,9 @@ pub struct ReadOnlyDataRef<'data> {
 }
 
 impl<'data> ReadOnlyDataRef<'data> {
+    /// Get owned ReadOnlyData struct
+    ///
+    /// This clones all information into a separate struct
     pub fn to_owned(&self) -> ReadOnlyData {
         ReadOnlyData {
             columns: self.columns.iter().map(|c| c.to_string()).collect(),

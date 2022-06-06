@@ -248,6 +248,7 @@ impl ValueLimiter {
     }
 }
 
+/// Type of a value
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum ValueType {
     Number,

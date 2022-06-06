@@ -24,7 +24,7 @@ impl Reader {
         }
     }
 
-    /// Ignore empty row
+    /// Ignore empty rows
     ///
     /// This prevents reader from panicking on empty row.
     pub fn ignore_empty_row(mut self, tv: bool) -> Self {
@@ -137,7 +137,10 @@ impl Reader {
         self
     }
 
-    /// Use line delimiter instead of default one : "\n".
+    /// Use given line delimiter instead of default one : "\n, \r\n".
+    ///
+    /// Only default state will detect both "\n" and "\r\n". If you set "\n" manually, "\r\n" will
+    /// be ignored.
     pub fn use_line_delimiter(mut self, delimiter: char) -> Self {
         self.parser.line_delimiter.replace(delimiter);
         self.option.line_delimiter.replace(delimiter);

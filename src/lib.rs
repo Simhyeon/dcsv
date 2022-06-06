@@ -1,10 +1,14 @@
 /// # Dynamic csv manipulation library
 ///
+/// Dcsv is a dynamic csv container library which offers reading and writing features.
+///
 /// # Basic
 ///
 /// Dcsv has two major structs of Reader and VirtualData. Reader reads csv data as byte stream and
 /// return virtual data. Changes to virtual data is not linked to original source. User needs to
 /// save virtual data to desired destination.
+///
+/// If you want static form of data, use read_only_ref method to get data as records form.
 ///
 /// ## Usage
 ///
