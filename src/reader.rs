@@ -108,7 +108,7 @@ impl Reader {
                     self.data.drop();
                     return Err(DcsvError::InvalidRowData(format!(
                         "Row of line \"{}\" has different length.",
-                        row_count + 1
+                        row_count
                     )));
                 }
 
