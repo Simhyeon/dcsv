@@ -1,6 +1,11 @@
-# 0.1.5
+# 0.2.0
 
-- New : More documentations
+- FET : "to_vec" for row
+- FET : New "custom_header" method for reader
+- CHG : Changed "drop" method to "drop\_data"
+- ERG : More documentations for docs.rs
+- ERG : Applied clippy fix
+- BUG : Row count typo
 
 # 0.1.4
 

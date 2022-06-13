@@ -1,7 +1,11 @@
 ## TODO
 
+* [x] Fixed a typo in reader's error message
 * [x] Better docs.rs documentation
-* [ ] Make virtual data's api more ergonomic for library usage
+* [x] Custom header
+* [x] Clippied the source code
+* [x] Make virtual data's api more ergonomic for library usage
+
 * [ ] Test various formats of csv data
 
 ## How csv reader is different from ced?
