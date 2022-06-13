@@ -12,6 +12,12 @@ pub struct VirtualData {
     pub rows: Vec<Row>,
 }
 
+impl Default for VirtualData {
+    fn default() -> Self {
+        Self::new()
+    }
+} 
+
 impl VirtualData {
     pub fn new() -> Self {
         Self {
@@ -141,7 +147,7 @@ impl VirtualData {
     ///
     /// Column cannot be a number or exsiting one
     pub fn rename_column(&mut self, column: &str, new_name: &str) -> DcsvResult<()> {
-        if let Ok(_) = new_name.parse::<f64>() {
+        if new_name.parse::<f64>().is_ok() {
             return Err(DcsvError::InvalidColumn(format!(
                 "Given invalid column name, \"{new_name}\" which is a number"
             )));
@@ -149,11 +155,11 @@ impl VirtualData {
         let column_index = self.try_get_column_index(column);
         let next_column_index = self.try_get_column_index(new_name);
 
-        if let None = column_index {
+        if column_index.is_none() {
             return Err(DcsvError::OutOfRangeError);
         }
 
-        if let Some(_) = next_column_index {
+        if next_column_index.is_some() {
             return Err(DcsvError::InvalidColumn(format!(
                 "Cannot rename to \"{}\" which already exists",
                 &new_name
@@ -173,7 +179,7 @@ impl VirtualData {
     /// Set values to a column
     pub fn set_column(&mut self, column: &str, value: Value) -> DcsvResult<()> {
         let column_index = self.try_get_column_index(column);
-        if let None = column_index {
+        if column_index.is_none() {
             return Err(DcsvError::OutOfRangeError);
         }
         let column = &self.columns[column_index.unwrap()].name;
@@ -208,7 +214,7 @@ impl VirtualData {
                 if !col.limiter.qualify(value) {
                     return Err(DcsvError::InvalidRowData(format!(
                         "\"{}\" doesn't qualify \"{}\"'s limiter",
-                        value.to_string(),
+                        value,
                         col.name
                     )));
                 }
@@ -221,7 +227,7 @@ impl VirtualData {
         let row = self.rows.get_mut(row_number).unwrap();
         for (col, value) in col_value_iter {
             if let Some(value) = value {
-                row.update_cell_value(&col.name, std::mem::replace(value, Value::default()))
+                row.update_cell_value(&col.name, std::mem::take(value))
             }
         }
 
@@ -249,7 +255,7 @@ impl VirtualData {
             if !col.limiter.qualify(value) {
                 return Err(DcsvError::InvalidRowData(format!(
                     "\"{}\" doesn't qualify \"{}\"'s limiter",
-                    value.to_string(),
+                    value,
                     col.name
                 )));
             }
@@ -344,23 +350,23 @@ impl VirtualData {
                 column_number
             )));
         }
-        if let Some(_) = self.try_get_column_index(column_name) {
+        if self.try_get_column_index(column_name).is_some() {
             return Err(DcsvError::InvalidColumn(format!(
                 "Cannot add existing column or number named column = \"{}\"",
                 column_name
             )));
         }
-        if let Ok(_) = column_name.parse::<isize>() {
-            return Err(DcsvError::InvalidColumn(format!(
-                "Cannot add number named column"
-            )));
+        if column_name.parse::<isize>().is_ok() {
+            return Err(DcsvError::InvalidColumn(
+                "Cannot add number named column".to_owned()
+            ));
         }
         let new_column = Column::new(column_name, column_type, limiter);
         let default_value = new_column.get_default_value();
         for row in &mut self.rows {
             row.insert_cell(
                 &new_column.name,
-                placeholder.clone().unwrap_or(default_value.clone()),
+                placeholder.clone().unwrap_or_else(||default_value.clone()),
             );
         }
         self.columns.insert(column_number, new_column);
@@ -416,9 +422,9 @@ impl VirtualData {
                     }
                 }
             } else {
-                return Err(DcsvError::InvalidRowData(format!(
-                    "Failed to get row data while setting limiter",
-                )));
+                return Err(DcsvError::InvalidRowData(
+                    "Failed to get row data while setting limiter".to_string()
+                ));
             }
 
             if let Some(ttype) = convert_to {
@@ -447,27 +453,27 @@ impl VirtualData {
             let mut line = col.name.clone() + ",";
             let limiter = &col.limiter;
             line.push_str(&limiter.get_type().to_string());
-            line.push_str(",");
+            line.push(',');
             line.push_str(
                 &limiter
                     .get_default()
                     .map(|s| s.to_string())
-                    .unwrap_or(String::new()),
+                    .unwrap_or_default(),
             );
-            line.push_str(",");
+            line.push(',');
             line.push_str(
                 &limiter
                     .get_variant()
                     .map(|s| s.iter().map(|s| s.to_string()).collect::<Vec<String>>())
-                    .unwrap_or(vec![])
+                    .unwrap_or_default()
                     .join(" "),
             );
-            line.push_str(",");
+            line.push(',');
             line.push_str(
                 &limiter
                     .get_pattern()
                     .map(|s| s.to_string())
-                    .unwrap_or(String::new()),
+                    .unwrap_or_default(),
             );
 
             schema.push_str(&(line + "\n"));
@@ -496,10 +502,8 @@ impl VirtualData {
 
     /// Check if cell coordinate is not out of range
     fn is_valid_cell_coordinate(&self, x: usize, y: usize) -> bool {
-        if x < self.get_row_count() {
-            if y < self.get_column_count() {
-                return true;
-            }
+        if x < self.get_row_count() && y < self.get_column_count() {
+            return true;
         }
 
         false
@@ -522,15 +526,15 @@ impl VirtualData {
             if col.limiter.qualify(value) {
                 Ok(())
             } else {
-                return Err(DcsvError::InvalidCellData(format!(
-                    "Given cell data failed to match limiter's restriction",
-                )));
+                Err(DcsvError::InvalidCellData(
+                        "Given cell data failed to match limiter's restriction".to_string(),
+                ))
             }
         } else {
-            return Err(DcsvError::InvalidRowData(format!(
+            Err(DcsvError::InvalidRowData(format!(
                 "Given column number \"{}\" doesn't exist",
                 column
-            )));
+            )))
         }
     }
 
@@ -561,7 +565,7 @@ impl VirtualData {
     }
 
     /// Drop all data from self
-    pub fn drop(&mut self) {
+    pub fn drop_data(&mut self) {
         self.columns.clear();
         self.rows.clear();
     }
@@ -621,7 +625,7 @@ impl Column {
         Self {
             name: name.to_string(),
             column_type,
-            limiter: limiter.unwrap_or(ValueLimiter::default()),
+            limiter: limiter.unwrap_or_default(),
         }
     }
 
@@ -656,7 +660,7 @@ impl Column {
         // has variant
         let variant = self.limiter.get_variant();
         if let Some(vec) = variant {
-            if vec.len() != 0 {
+            if !vec.is_empty() {
                 return vec[0].clone();
             }
         }
@@ -677,6 +681,12 @@ pub struct Row {
     pub values: HashMap<String, Value>,
 }
 
+impl Default for Row {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Row {
     pub fn new() -> Self {
         Self {
@@ -694,7 +704,7 @@ impl Row {
                 &self
                     .values
                     .get(&col.name)
-                    .ok_or(DcsvError::InvalidColumn(
+                    .ok_or_else(||DcsvError::InvalidColumn(
                         "Given column was not present thus cannot construct row string".to_string(),
                     ))?
                     .to_string(),
