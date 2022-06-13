@@ -32,13 +32,13 @@ impl Parser {
             .expect("Failed to convert to string")
             .replace("\r\n", "\n");
         let mut previous = '0';
-        let mut value = std::mem::replace(&mut self.remnant, String::new());
+        let mut value = std::mem::take(&mut self.remnant);
         let mut iter = line.chars().peekable();
         while let Some(ch) = iter.next() {
             match ch {
                 _ if ch == delim.unwrap_or(',') => {
                     if !self.on_quote {
-                        let flushed = std::mem::replace(&mut value, String::new());
+                        let flushed = std::mem::take(&mut value);
                         self.container.push(flushed);
                         previous = ch;
                         continue;
@@ -77,7 +77,7 @@ impl Parser {
                     self.container.push(value);
                 }
             }
-            Ok(Some(std::mem::replace(&mut self.container, vec![])))
+            Ok(Some(std::mem::take(&mut self.container)))
         }
     }
 }
