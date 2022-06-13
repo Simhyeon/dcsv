@@ -8,8 +8,11 @@ pub const LIMITER_ATTRIBUTE_LEN: usize = 4;
 /// Basic component of virtual data
 ///
 /// Value can be either number or text.
-/// - "Number" is signed interger (usize)
+/// - "Number" is a signed interger (isize)
 /// - Text is simply any data
+///
+/// Dcsv doesn't support float type because float can change the "original" source while
+/// overriding. Since dcsv's goal is about safe manipulation of csv value float is not appropriate.
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug)]
 pub enum Value {
     Number(isize),
@@ -17,6 +20,9 @@ pub enum Value {
 }
 
 impl Value {
+    /// Get a type of value
+    ///
+    /// This returns a new variable "ValueType"
     pub fn get_type(&self) -> ValueType {
         match self {
             Self::Number(_) => ValueType::Number,
@@ -24,6 +30,8 @@ impl Value {
         }
     }
     /// Convert string into value with given type
+    ///
+    /// This can fail when a given source cannot bed converted to isize
     pub fn from_str(src: &str, value_type: ValueType) -> DcsvResult<Self> {
         Ok(match value_type {
             ValueType::Number => {
@@ -101,6 +109,7 @@ impl Display for ValueLimiter {
 }
 
 impl ValueLimiter {
+    /// Check if given value can be converted to the type of valuelimiter
     pub fn is_convertible(&self, value: &Value) -> Option<ValueType> {
         // TODO
         // Only when value type matches limiter's type
@@ -126,6 +135,7 @@ impl ValueLimiter {
         }
     }
 
+    /// Check if value qualifies
     pub fn qualify(&self, value: &Value) -> bool {
         if value.get_type() != self.get_type() {
             return false;
@@ -198,7 +208,7 @@ impl ValueLimiter {
             // Default is empty
             if !pattern.is_empty() || !variants.is_empty() {
                 return Err(DcsvError::InvalidLimiter(
-                    "Either pattern or variants needs default value to be valid".to_string()
+                    "Either pattern or variants needs default value to be valid".to_string(),
                 ));
             }
         }
@@ -224,7 +234,7 @@ impl ValueLimiter {
     pub fn set_variant(&mut self, default: Value, variants: &[Value]) -> DcsvResult<()> {
         if !variants.contains(&default) {
             return Err(DcsvError::InvalidLimiter(
-                "Default value should be among one of variants".to_string()
+                "Default value should be among one of variants".to_string(),
             ));
         }
         self.default.replace(default);
@@ -239,7 +249,7 @@ impl ValueLimiter {
     pub fn set_pattern(&mut self, default: Value, pattern: Regex) -> DcsvResult<()> {
         if !pattern.is_match(&default.to_string()) {
             return Err(DcsvError::InvalidLimiter(
-                "Default value should match pattern".to_string()
+                "Default value should match pattern".to_string(),
             ));
         }
         self.default.replace(default);
@@ -276,7 +286,9 @@ impl std::str::FromStr for ValueType {
         match s.to_lowercase().as_str() {
             "number" => Ok(Self::Number),
             "text" => Ok(Self::Text),
-            _ => Err(DcsvError::InvalidValueType("Value type should be either number or text".to_string())),
+            _ => Err(DcsvError::InvalidValueType(
+                "Value type should be either number or text".to_string(),
+            )),
         }
     }
 }

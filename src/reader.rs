@@ -38,7 +38,7 @@ impl Reader {
         self
     }
 
-    /// Trim all values
+    /// Trim all read values
     pub fn trim(mut self, tv: bool) -> Self {
         self.option.trim = tv;
         self
@@ -58,6 +58,27 @@ impl Reader {
         self
     }
 
+    /// Clear reader option and set to default
+    pub fn clear_reader_option(&mut self) {
+        self.option = ReaderOption::new();
+    }
+
+    /// Use given delimiter instead of default one : ",".
+    pub fn use_delimiter(mut self, delimiter: char) -> Self {
+        self.option.delimiter.replace(delimiter);
+        self
+    }
+
+    /// Use given line delimiter instead of default one : "\n, \r\n".
+    ///
+    /// Only default state will detect both "\n" and "\r\n". If you set "\n" manually, "\r\n" will
+    /// be ignored.
+    pub fn use_line_delimiter(mut self, delimiter: char) -> Self {
+        self.parser.line_delimiter.replace(delimiter);
+        self.option.line_delimiter.replace(delimiter);
+        self
+    }
+
     /// Read csv value from buf read stream
     ///
     /// This return read value as virtual data struct
@@ -73,10 +94,9 @@ impl Reader {
         while num_bytes != 0 {
             // Create column
             // Create row or continue to next line.
-            let row = self.parser.feed_chunk(
-                std::mem::take(&mut row_buffer),
-                self.option.delimiter,
-            )?;
+            let row = self
+                .parser
+                .feed_chunk(std::mem::take(&mut row_buffer), self.option.delimiter)?;
 
             // Row has been detected
             if let Some(row) = row {
@@ -102,15 +122,19 @@ impl Reader {
                 if self.data.get_column_count() == 0 {
                     if !self.option.custom_header.is_empty() {
                         if self.option.custom_header.len() != row.len() {
-                            return Err(
-                                DcsvError::InvalidColumn(format!("Custom value has different length. Given {} but needs {}", self.option.custom_header.len(), row.len()))
-                            );
+                            return Err(DcsvError::InvalidColumn(format!(
+                                "Custom value has different length. Given {} but needs {}",
+                                self.option.custom_header.len(),
+                                row.len()
+                            )));
                         }
                         let header = std::mem::take(&mut self.option.custom_header);
                         self.add_multiple_columns(&header)?;
                     } else if self.option.read_header {
                         if self.option.trim {
-                            self.add_multiple_columns_ref(&row.iter().map(|s| s.trim()).collect::<Vec<_>>())?;
+                            self.add_multiple_columns_ref(
+                                &row.iter().map(|s| s.trim()).collect::<Vec<_>>(),
+                            )?;
                         } else {
                             self.add_multiple_columns(&row)?;
                         }
@@ -153,22 +177,7 @@ impl Reader {
         Ok(std::mem::replace(&mut self.data, VirtualData::new()))
     }
 
-    /// Use given delimiter instead of default one : ",".
-    pub fn use_delimiter(mut self, delimiter: char) -> Self {
-        self.option.delimiter.replace(delimiter);
-        self
-    }
-
-    /// Use given line delimiter instead of default one : "\n, \r\n".
-    ///
-    /// Only default state will detect both "\n" and "\r\n". If you set "\n" manually, "\r\n" will
-    /// be ignored.
-    pub fn use_line_delimiter(mut self, delimiter: char) -> Self {
-        self.parser.line_delimiter.replace(delimiter);
-        self.option.line_delimiter.replace(delimiter);
-        self
-    }
-
+    // -----
     // <DRY>
     // DRY Codes
     fn add_row_fast<T: AsRef<str>>(&mut self, row: &[T]) -> DcsvResult<()> {
@@ -183,8 +192,6 @@ impl Reader {
         Ok(())
     }
 
-    // The reason there is no &Vec<impl AsRef<str>> is because
-    // dcsv is heavily library based crate, and I don't want to generic as much as possible
     fn add_row_fast_ref<T: AsRef<str>>(&mut self, row: &[T]) -> DcsvResult<()> {
         self.data.insert_row(
             self.data.get_row_count(),
@@ -223,6 +230,9 @@ impl Reader {
         }
         column_names
     }
+
+    // </DRY>
+    // -----
 }
 
 /// Reader behaviour related options

@@ -1,5 +1,6 @@
 pub type DcsvResult<T> = Result<T, DcsvError>;
 
+/// Error types for dcsv related operations.
 #[derive(Debug)]
 pub enum DcsvError {
     InvalidLimiter(String),

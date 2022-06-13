@@ -1,6 +1,7 @@
 use crate::error::DcsvResult;
 
-pub struct Parser {
+/// Csv line parser
+pub(crate) struct Parser {
     pub(crate) container: Vec<String>,
     pub(crate) remnant: String,
     pub(crate) on_quote: bool,
@@ -23,6 +24,10 @@ impl Parser {
         self.on_quote = false;
     }
 
+    /// Feed chunk to parser
+    ///
+    /// This will return Some when chunk composes a fully line.
+    /// A complete line is deteced when line_delimiter is met.
     pub fn feed_chunk(
         &mut self,
         chunk: Vec<u8>,
