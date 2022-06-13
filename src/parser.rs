@@ -32,6 +32,7 @@ impl Parser {
         &mut self,
         chunk: Vec<u8>,
         delim: Option<char>,
+        consume_dquote: bool,
     ) -> DcsvResult<Option<Vec<String>>> {
         let line = String::from_utf8(chunk)
             .expect("Failed to convert to string")
@@ -59,6 +60,9 @@ impl Parser {
                             self.on_quote = !self.on_quote;
                         }
                         previous = ch;
+                        if consume_dquote {
+                            continue;
+                        }
                     }
                 }
                 _ => previous = ch,

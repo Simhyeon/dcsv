@@ -11,6 +11,7 @@ pub(crate) const ALPHABET: [&str; 26] = [
 pub fn csv_row_from_split(
     split: Option<&std::io::Result<Vec<u8>>>,
     delimiter: Option<char>,
+    consume_dquote: bool,
 ) -> DcsvResult<Option<Vec<String>>> {
     let split = split
         .map(|value| {
@@ -18,7 +19,7 @@ pub fn csv_row_from_split(
                 let src = std::str::from_utf8(value);
                 match src {
                     Err(_) => None,
-                    Ok(src) => Some(csv_row_to_vector(src, delimiter)),
+                    Ok(src) => Some(csv_row_to_vector(src, delimiter, consume_dquote)),
                 }
             } else {
                 None
@@ -29,7 +30,7 @@ pub fn csv_row_from_split(
 }
 
 /// Split csv row into a vector of string
-pub fn csv_row_to_vector(line: &str, delimiter: Option<char>) -> Vec<String> {
+pub fn csv_row_to_vector(line: &str, delimiter: Option<char>, consume_dquote: bool) -> Vec<String> {
     let mut split = vec![];
     let mut on_quote = false;
     let mut previous = ' ';
@@ -47,6 +48,9 @@ pub fn csv_row_to_vector(line: &str, delimiter: Option<char>) -> Vec<String> {
                         on_quote = !on_quote;
                     }
                     previous = ch;
+                    if consume_dquote {
+                        continue;
+                    }
                 }
             }
             // This looks verbose but needs match guard

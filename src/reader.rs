@@ -36,6 +36,12 @@ impl Reader {
         self
     }
 
+    /// Consumes double quote in csv file
+    pub fn consume_dquote(mut self, tv: bool) -> Self {
+        self.option.consume_dquote = tv;
+        self
+    }
+
     /// Ignore empty rows
     ///
     /// This prevents reader from panicking on empty row.
@@ -100,9 +106,11 @@ impl Reader {
         while num_bytes != 0 {
             // Create column
             // Create row or continue to next line.
-            let row = self
-                .parser
-                .feed_chunk(std::mem::take(&mut row_buffer), self.option.delimiter)?;
+            let row = self.parser.feed_chunk(
+                std::mem::take(&mut row_buffer),
+                self.option.delimiter,
+                self.option.consume_dquote,
+            )?;
 
             // Row has been detected
             if let Some(row) = row {
@@ -245,6 +253,7 @@ impl Reader {
 pub struct ReaderOption {
     pub trim: bool,
     pub read_header: bool,
+    pub consume_dquote: bool,
     pub custom_header: Vec<String>,
     pub delimiter: Option<char>,
     pub line_delimiter: Option<char>,
@@ -263,6 +272,7 @@ impl ReaderOption {
             trim: false,
             read_header: true,
             custom_header: vec![],
+            consume_dquote: false,
             delimiter: None,
             line_delimiter: None,
             ignore_empty_row: false,
