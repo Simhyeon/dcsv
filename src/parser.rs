@@ -76,7 +76,8 @@ impl Parser {
             Ok(None)
         } else {
             // If there is yet flushed value, add to container
-            if !value.is_empty() {
+            if !value.is_empty() || previous == ',' {
+                // Empty but previous was comma
                 // Middle row
                 if let Some(stripped) = value.strip_suffix(self.line_delimiter.unwrap_or('\n')) {
                     self.container.push(stripped.to_owned());
@@ -86,6 +87,7 @@ impl Parser {
                     self.container.push(value);
                 }
             }
+            println!("CONTAINER : {:#?}", self.container);
             Ok(Some(std::mem::take(&mut self.container)))
         }
     }
