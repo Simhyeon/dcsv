@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 use crate::error::{DcsvError, DcsvResult};
 use regex::Regex;
@@ -86,9 +86,9 @@ pub struct ValueLimiter {
 
 impl Display for ValueLimiter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "type : {}\n", self.value_type)?;
+        writeln!(f, "type : {}", self.value_type)?;
         if let Some(var) = &self.variant {
-            write!(f, "default value : {:?}\n", &var)?;
+            writeln!(f, "default value : {:?}", &var)?;
         }
         if let Some(var) = &self.variant {
             write!(f, "variants : {:?}", var)
@@ -159,7 +159,7 @@ impl ValueLimiter {
     /// - Default
     /// - Variant
     /// - Pattern
-    pub fn from_line(attributes: &Vec<impl AsRef<str>>) -> DcsvResult<Self> {
+    pub fn from_line(attributes: &[impl AsRef<str>]) -> DcsvResult<Self> {
         let attributes: Vec<&str> = attributes.iter().map(|s| s.as_ref()).collect();
         if attributes.len() != LIMITER_ATTRIBUTE_LEN {
             return Err(DcsvError::InvalidRowData(format!(
@@ -168,7 +168,7 @@ impl ValueLimiter {
             )));
         }
         let mut limiter = Self::default();
-        let vt = ValueType::from_str(&attributes[0]);
+        let vt = ValueType::from_str(attributes[0])?;
         let default = attributes[1];
         let variants = attributes[2];
         let pattern = attributes[3];
@@ -176,7 +176,7 @@ impl ValueLimiter {
 
         // Default value is necessary for complicated limiter
         if !default.is_empty() {
-            let default = Value::from_str(&default, vt)?;
+            let default = Value::from_str(default, vt)?;
 
             // DO variants
             if !variants.is_empty() {
@@ -189,7 +189,7 @@ impl ValueLimiter {
                 // Do patterns
                 limiter.set_pattern(
                     default,
-                    Regex::new(&pattern).expect("Failed to create pattern"),
+                    Regex::new(pattern).expect("Failed to create pattern"),
                 )?;
             } else {
                 limiter.default = Some(default);
@@ -197,9 +197,9 @@ impl ValueLimiter {
         } else {
             // Default is empty
             if !pattern.is_empty() || !variants.is_empty() {
-                return Err(DcsvError::InvalidLimiter(format!(
-                    "Either pattern or variants needs default value to be valid"
-                )));
+                return Err(DcsvError::InvalidLimiter(
+                    "Either pattern or variants needs default value to be valid".to_string()
+                ));
             }
         }
         Ok(limiter)
@@ -221,11 +221,11 @@ impl ValueLimiter {
         self.variant.as_ref()
     }
 
-    pub fn set_variant(&mut self, default: Value, variants: &Vec<Value>) -> DcsvResult<()> {
+    pub fn set_variant(&mut self, default: Value, variants: &[Value]) -> DcsvResult<()> {
         if !variants.contains(&default) {
-            return Err(DcsvError::InvalidLimiter(format!(
-                "Default value should be among one of variants"
-            )));
+            return Err(DcsvError::InvalidLimiter(
+                "Default value should be among one of variants".to_string()
+            ));
         }
         self.default.replace(default);
         self.variant.replace(variants.to_vec());
@@ -238,9 +238,9 @@ impl ValueLimiter {
 
     pub fn set_pattern(&mut self, default: Value, pattern: Regex) -> DcsvResult<()> {
         if !pattern.is_match(&default.to_string()) {
-            return Err(DcsvError::InvalidLimiter(format!(
-                "Default value should match pattern"
-            )));
+            return Err(DcsvError::InvalidLimiter(
+                "Default value should match pattern".to_string()
+            ));
         }
         self.default.replace(default);
         self.pattern.replace(pattern);
@@ -268,12 +268,15 @@ impl std::fmt::Display for ValueType {
     }
 }
 
-impl ValueType {
-    pub fn from_str(src: &str) -> Self {
-        if src.to_lowercase().as_str() == "number" {
-            Self::Number
-        } else {
-            Self::Text
+impl std::str::FromStr for ValueType {
+    type Err = DcsvError;
+
+    /// This actually never fails
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "number" => Ok(Self::Number),
+            "text" => Ok(Self::Text),
+            _ => Err(DcsvError::InvalidValueType("Value type should be either number or text".to_string())),
         }
     }
 }
