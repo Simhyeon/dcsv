@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod testos {
-    use crate::Reader;
+    use crate::{Reader, ReaderOption};
 
     #[test]
     fn read_csv() {

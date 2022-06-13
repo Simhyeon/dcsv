@@ -30,6 +30,12 @@ impl Reader {
         }
     }
 
+    /// Build with reader option
+    pub fn with_option(mut self, option: ReaderOption) -> Self {
+        self.option = option;
+        self
+    }
+
     /// Ignore empty rows
     ///
     /// This prevents reader from panicking on empty row.
@@ -236,13 +242,19 @@ impl Reader {
 }
 
 /// Reader behaviour related options
-pub(crate) struct ReaderOption {
-    pub(crate) trim: bool,
-    pub(crate) read_header: bool,
-    pub(crate) custom_header: Vec<String>,
-    pub(crate) delimiter: Option<char>,
-    pub(crate) line_delimiter: Option<char>,
-    pub(crate) ignore_empty_row: bool,
+pub struct ReaderOption {
+    pub trim: bool,
+    pub read_header: bool,
+    pub custom_header: Vec<String>,
+    pub delimiter: Option<char>,
+    pub line_delimiter: Option<char>,
+    pub ignore_empty_row: bool,
+}
+
+impl Default for ReaderOption {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ReaderOption {
