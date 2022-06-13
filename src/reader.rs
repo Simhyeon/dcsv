@@ -44,6 +44,12 @@ impl Reader {
         self
     }
 
+    /// Set custom header
+    pub fn custom_header(mut self, headers: Vec<String>) -> Self {
+        self.option.custom_header = headers;
+        self
+    }
+
     /// Read csv value from buf read stream
     ///
     /// This return read value as virtual data struct
@@ -86,7 +92,10 @@ impl Reader {
 
                 // Add column header if column is empty
                 if self.data.get_column_count() == 0 {
-                    if self.option.read_header {
+                    if self.option.custom_header.len() != 0 {
+                        let header = std::mem::replace(&mut self.option.custom_header, vec![]);
+                        self.add_multiple_columns(&header)?;
+                    } else if self.option.read_header {
                         if self.option.trim {
                             self.add_multiple_columns_ref(&row.iter().map(|s| s.trim()).collect())?;
                         } else {
@@ -207,6 +216,7 @@ impl Reader {
 pub(crate) struct ReaderOption {
     pub(crate) trim: bool,
     pub(crate) read_header: bool,
+    pub(crate) custom_header: Vec<String>,
     pub(crate) delimiter: Option<char>,
     pub(crate) line_delimiter: Option<char>,
     pub(crate) ignore_empty_row: bool,
@@ -217,6 +227,7 @@ impl ReaderOption {
         Self {
             trim: false,
             read_header: true,
+            custom_header: vec![],
             delimiter: None,
             line_delimiter: None,
             ignore_empty_row: false,
