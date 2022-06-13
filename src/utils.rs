@@ -15,7 +15,7 @@ pub fn csv_row_from_split(
     let split = split
         .map(|value| {
             if let Ok(value) = value {
-                let src = std::str::from_utf8(&value);
+                let src = std::str::from_utf8(value);
                 match src {
                     Err(_) => None,
                     Ok(src) => Some(csv_row_to_vector(src, delimiter)),
@@ -53,7 +53,7 @@ pub fn csv_row_to_vector(line: &str, delimiter: Option<char>) -> Vec<String> {
             // because match pattern doesn't work like what starters think
             _ if ch == delimiter.unwrap_or(',') => {
                 if !on_quote {
-                    let flushed = std::mem::replace(&mut chunk, String::new());
+                    let flushed = std::mem::take(&mut chunk);
                     split.push(flushed);
                     previous = ch;
                     continue;
