@@ -87,7 +87,6 @@ impl Parser {
                     self.container.push(value);
                 }
             }
-            println!("CONTAINER : {:#?}", self.container);
             Ok(Some(std::mem::take(&mut self.container)))
         }
     }
