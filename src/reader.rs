@@ -15,6 +15,12 @@ pub struct Reader {
     pub data: VirtualData,
 }
 
+impl Default for Reader {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Reader {
     pub fn new() -> Self {
         Self {
@@ -45,8 +51,10 @@ impl Reader {
     }
 
     /// Set custom header
-    pub fn custom_header(mut self, headers: Vec<String>) -> Self {
-        self.option.custom_header = headers;
+    ///
+    /// This will override "has_header" option and create header from given values.
+    pub fn custom_header<T: AsRef<str>>(mut self, headers: &[T]) -> Self {
+        self.option.custom_header = headers.iter().map(|s| s.as_ref().to_owned()).collect();
         self
     }
 
@@ -66,7 +74,7 @@ impl Reader {
             // Create column
             // Create row or continue to next line.
             let row = self.parser.feed_chunk(
-                std::mem::replace(&mut row_buffer, vec![]),
+                std::mem::take(&mut row_buffer),
                 self.option.delimiter,
             )?;
 
@@ -92,12 +100,17 @@ impl Reader {
 
                 // Add column header if column is empty
                 if self.data.get_column_count() == 0 {
-                    if self.option.custom_header.len() != 0 {
-                        let header = std::mem::replace(&mut self.option.custom_header, vec![]);
+                    if !self.option.custom_header.is_empty() {
+                        if self.option.custom_header.len() != row.len() {
+                            return Err(
+                                DcsvError::InvalidColumn(format!("Custom value has different length. Given {} but needs {}", self.option.custom_header.len(), row.len()))
+                            );
+                        }
+                        let header = std::mem::take(&mut self.option.custom_header);
                         self.add_multiple_columns(&header)?;
                     } else if self.option.read_header {
                         if self.option.trim {
-                            self.add_multiple_columns_ref(&row.iter().map(|s| s.trim()).collect())?;
+                            self.add_multiple_columns_ref(&row.iter().map(|s| s.trim()).collect::<Vec<_>>())?;
                         } else {
                             self.add_multiple_columns(&row)?;
                         }
@@ -114,7 +127,7 @@ impl Reader {
 
                 // Given row data has different length with column
                 if row.len() != self.data.get_column_count() {
-                    self.data.drop();
+                    self.data.drop_data();
                     return Err(DcsvError::InvalidRowData(format!(
                         "Row of line \"{}\" has different length.",
                         row_count
@@ -122,7 +135,7 @@ impl Reader {
                 }
 
                 if self.option.trim {
-                    self.add_row_fast_ref(&row.iter().map(|s| s.trim()).collect())?;
+                    self.add_row_fast_ref(&row.iter().map(|s| s.trim()).collect::<Vec<_>>())?;
                 } else {
                     // Add as new row and proceed
                     self.add_row_fast(&row)?;
@@ -158,12 +171,12 @@ impl Reader {
 
     // <DRY>
     // DRY Codes
-    fn add_row_fast(&mut self, row: &Vec<String>) -> DcsvResult<()> {
+    fn add_row_fast<T: AsRef<str>>(&mut self, row: &[T]) -> DcsvResult<()> {
         self.data.insert_row(
             self.data.get_row_count(),
             Some(
                 &row.iter()
-                    .map(|val| Value::Text(val.to_string()))
+                    .map(|val| Value::Text(val.as_ref().to_string()))
                     .collect::<Vec<_>>(),
             ),
         )?;
@@ -172,30 +185,30 @@ impl Reader {
 
     // The reason there is no &Vec<impl AsRef<str>> is because
     // dcsv is heavily library based crate, and I don't want to generic as much as possible
-    fn add_row_fast_ref(&mut self, row: &Vec<&str>) -> DcsvResult<()> {
+    fn add_row_fast_ref<T: AsRef<str>>(&mut self, row: &[T]) -> DcsvResult<()> {
         self.data.insert_row(
             self.data.get_row_count(),
             Some(
                 &row.iter()
-                    .map(|val| Value::Text(val.to_string()))
+                    .map(|val| Value::Text(val.as_ref().to_string()))
                     .collect::<Vec<_>>(),
             ),
         )?;
         Ok(())
     }
 
-    fn add_multiple_columns(&mut self, column_names: &Vec<String>) -> DcsvResult<()> {
+    fn add_multiple_columns<T: AsRef<str>>(&mut self, column_names: &[T]) -> DcsvResult<()> {
         for (idx, col) in column_names.iter().enumerate() {
             self.data
-                .insert_column(idx, col, ValueType::Text, None, None)?;
+                .insert_column(idx, col.as_ref(), ValueType::Text, None, None)?;
         }
         Ok(())
     }
 
-    fn add_multiple_columns_ref(&mut self, column_names: &Vec<&str>) -> DcsvResult<()> {
+    fn add_multiple_columns_ref<T: AsRef<str>>(&mut self, column_names: &[T]) -> DcsvResult<()> {
         for (idx, col) in column_names.iter().enumerate() {
             self.data
-                .insert_column(idx, col, ValueType::Text, None, None)?;
+                .insert_column(idx, col.as_ref(), ValueType::Text, None, None)?;
         }
         Ok(())
     }
