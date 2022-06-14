@@ -8,8 +8,8 @@ pub const SCHEMA_HEADER: &str = "column,type,default,variant,pattern";
 /// Virtual data which contains csv information
 ///
 /// Virtual data has two variables which are
-/// * - columns
-/// * - rows
+/// * columns
+/// * rows
 #[derive(Clone)]
 pub struct VirtualData {
     pub columns: Vec<Column>,
@@ -150,16 +150,11 @@ impl VirtualData {
 
     /// Rename a column
     ///
-    /// Column's name cannot be a number or an exsiting name
+    /// Column's name cannot be an exsiting name
     ///
-    /// * - column   : either index or column name
-    /// * - new_name : New column name
+    /// * column   : either index or column name
+    /// * new_name : New column name
     pub fn rename_column(&mut self, column: &str, new_name: &str) -> DcsvResult<()> {
-        if new_name.parse::<f64>().is_ok() {
-            return Err(DcsvError::InvalidColumn(format!(
-                "Given invalid column name, \"{new_name}\" which is a number"
-            )));
-        }
         let column_index = self.try_get_column_index(column);
         let next_column_index = self.try_get_column_index(new_name);
 
@@ -344,11 +339,11 @@ impl VirtualData {
 
     /// Insert a column with given column informations
     ///
-    /// * - column_index  : Position to put column
-    /// * - column_name   : New column name
-    /// * - column_type   : Column's type
-    /// * - limiter       : Set limiter with
-    /// * - placeholder   : Placeholder will be applied to every row
+    /// * column_index  : Position to put column
+    /// * column_name   : New column name
+    /// * column_type   : Column's type
+    /// * limiter       : Set limiter with
+    /// * placeholder   : Placeholder will be applied to every row
     pub fn insert_column(
         &mut self,
         column_index: usize,
@@ -365,14 +360,9 @@ impl VirtualData {
         }
         if self.try_get_column_index(column_name).is_some() {
             return Err(DcsvError::InvalidColumn(format!(
-                "Cannot add existing column or number named column = \"{}\"",
+                "Cannot add existing column = \"{}\"",
                 column_name
             )));
-        }
-        if column_name.parse::<isize>().is_ok() {
-            return Err(DcsvError::InvalidColumn(
-                "Cannot add number named column".to_owned(),
-            ));
         }
         let new_column = Column::new(column_name, column_type, limiter);
         let default_value = new_column.get_default_value();
@@ -406,9 +396,9 @@ impl VirtualData {
 
     /// Set a limiter to a column
     ///
-    /// * - column  : column's index
-    /// * - limiter : Target limiter
-    /// * - panic   : If true, failed set will occur panic
+    /// * column  : column's index
+    /// * limiter : Target limiter
+    /// * panic   : If true, failed set will occur panic
     pub fn set_limiter(
         &mut self,
         column: usize,
@@ -549,7 +539,7 @@ impl VirtualData {
             }
         } else {
             Err(DcsvError::InvalidRowData(format!(
-                "Given column number \"{}\" doesn't exist",
+                "Given column index \"{}\" doesn't exist",
                 column
             )))
         }
@@ -833,8 +823,8 @@ impl Row {
 ///
 /// This is a cloned data from virtual_data and lifetime independent
 ///
-/// * - Columns : Vec<String>
-/// * - rows    : Vec<Vec<String>>
+/// * Columns : Vec<String>
+/// * rows    : Vec<Vec<String>>
 #[derive(Debug)]
 pub struct ReadOnlyData {
     pub columns: Vec<String>,
@@ -860,8 +850,8 @@ impl From<&VirtualData> for ReadOnlyData {
 
 /// Borrowed read only data from virtual data
 ///
-/// * - Columns : Vec<&str>
-/// * - rows    : Vec<Vec<&Value>>
+/// * Columns : Vec<&str>
+/// * rows    : Vec<Vec<&Value>>
 #[derive(Debug)]
 pub struct ReadOnlyDataRef<'data> {
     pub columns: Vec<&'data str>,
