@@ -7,6 +7,10 @@ pub const SCHEMA_HEADER: &str = "column,type,default,variant,pattern";
 
 /// Virtual data which contains csv information
 ///
+/// VirtualData holds row information as hashmap. Therefore modifying data( cell, row or column ) is generally faster than virtual array struct.
+/// VirtualData also allows limiters to confine csv value's possible states.
+/// Values in VirtualData can be indexed with either colum name or colum index.
+///
 /// Virtual data has two variables which are
 /// * columns
 /// * rows

@@ -1,5 +1,6 @@
 # 0.2.0
 
+- FET : VirtualArray
 - FET : "to_vec" for row
 - FET : New "custom_header" method for reader
 - CHG : Changed "drop" method to "drop\_data"

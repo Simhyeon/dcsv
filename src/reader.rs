@@ -92,7 +92,7 @@ impl Reader {
 
     /// Read csv value from buf read stream
     ///
-    /// This return read value as virtual data struct
+    /// This returns read value as virtual data struct
     pub fn data_from_stream(&mut self, mut csv_stream: impl BufRead) -> DcsvResult<VirtualData> {
         let mut row_buffer: Vec<u8> = vec![];
         let line_delimiter = self.option.line_delimiter.unwrap_or('\n') as u8;
@@ -190,13 +190,12 @@ impl Reader {
                 .expect("Failed to read until");
         }
 
-        // complete move data as return value to comply borrow rules
         Ok(data)
     }
 
     /// Read csv value from buf read stream
     ///
-    /// This return read value as virtual data struct
+    /// This returns read value as virtual array struct
     pub fn array_from_stream(&mut self, mut csv_stream: impl BufRead) -> DcsvResult<VirtualArray> {
         let mut row_buffer: Vec<u8> = vec![];
         let line_delimiter = self.option.line_delimiter.unwrap_or('\n') as u8;
@@ -293,7 +292,6 @@ impl Reader {
                 .expect("Failed to read until");
         }
 
-        // complete move data as return value to comply borrow rules
         Ok(data)
     }
 }

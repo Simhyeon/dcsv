@@ -1,6 +1,15 @@
 use crate::{DcsvError, DcsvResult};
 use std::cmp::Ordering;
 
+/// Virtual data which contains csv information in a form of arrays.
+///
+/// VirtualArray holds row information as vectors. Therefore indexing is generally faster than virtual data struct.
+/// VirtualArray doesn't allow limiters.
+/// Values in VirtualArray can be indexed only with colum index.
+///
+/// VirtualArray has two variables which are
+/// * columns
+/// * rows
 pub struct VirtualArray {
     pub columns: Vec<String>,
     pub rows: Vec<Vec<String>>,
@@ -117,14 +126,13 @@ impl VirtualArray {
     }
 
     /// Rename a column
+    ///
+    /// This will simply change the name of the column and doesn't affect rows.
     pub fn rename_column(&mut self, column_index: usize, new_name: &str) -> DcsvResult<()> {
         self.columns[column_index] = new_name.to_owned();
         Ok(())
     }
 
-    // TODO
-    // 1. Check limiter
-    // 2. Check if value exists
     /// Set values to a column
     ///
     /// Given value will override every row's value
@@ -165,13 +173,7 @@ impl VirtualArray {
         Ok(())
     }
 
-    // TODO
-    // 1. Check limiter
-    // 2. Check if value exists
     /// Set values to a row
-    ///
-    /// This assumes that given values accord to column's order.
-    /// This method will fail when given value fails to qualify column's limiter.
     pub fn set_row(&mut self, row_index: usize, values: &[&str]) -> DcsvResult<()> {
         // Row's value doesn't match length of columns
         if values.len() != self.get_column_count() {
@@ -195,7 +197,6 @@ impl VirtualArray {
         Some(value)
     }
 
-    // THis should insert row with given column limiters
     /// Insert a row to given index
     ///
     /// This can yield out of range error
@@ -327,7 +328,7 @@ impl VirtualArray {
     // </EXT>
 }
 
-/// to_string implementation for virtual data
+/// to_string implementation for virtual array
 ///
 /// This returns csv value string
 impl std::fmt::Display for VirtualArray {
