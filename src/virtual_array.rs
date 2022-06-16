@@ -117,8 +117,7 @@ impl VirtualArray {
     }
 
     /// Rename a column
-    pub fn rename_column(&mut self, column_index: &str, new_name: &str) -> DcsvResult<()> {
-        let column_index = Self::to_index(column_index)?;
+    pub fn rename_column(&mut self, column_index: usize, new_name: &str) -> DcsvResult<()> {
         self.columns[column_index] = new_name.to_owned();
         Ok(())
     }
@@ -129,8 +128,7 @@ impl VirtualArray {
     /// Set values to a column
     ///
     /// Given value will override every row's value
-    pub fn set_column(&mut self, column_index: &str, value: &str) -> DcsvResult<()> {
-        let column_index = Self::to_index(column_index)?;
+    pub fn set_column(&mut self, column_index: usize, value: &str) -> DcsvResult<()> {
         if !self.is_valid_cell_coordinate(0, column_index) {
             return Err(DcsvError::OutOfRangeError);
         }
@@ -188,13 +186,13 @@ impl VirtualArray {
     }
 
     /// get cell data by coordinate
-    pub fn get_cell(&self, x: usize, y: usize) -> DcsvResult<&str> {
+    pub fn get_cell(&self, x: usize, y: usize) -> Option<&str> {
         if !self.is_valid_cell_coordinate(x, y) {
-            return Err(DcsvError::OutOfRangeError);
+            return None;
         }
         let value = &self.rows[x][y];
 
-        Ok(value)
+        Some(value)
     }
 
     // THis should insert row with given column limiters
@@ -258,7 +256,7 @@ impl VirtualArray {
 
         self.columns.insert(column_index, column_name.to_owned());
         for row in &mut self.rows {
-            row.insert(column_index, placeholder.unwrap_or_else(|| "").to_owned());
+            row.insert(column_index, placeholder.unwrap_or("").to_owned());
         }
         Ok(())
     }
@@ -281,18 +279,6 @@ impl VirtualArray {
         }
 
         Ok(())
-    }
-
-    // <DRY>
-
-    /// Convert string column index to usize
-    fn to_index(column_index: &str) -> DcsvResult<usize> {
-        column_index.parse::<usize>().map_err(|_| {
-            DcsvError::InvalidColumn(format!(
-                "Colum \"{}\" cannot be converted integer index",
-                column_index
-            ))
-        })
     }
 
     /// Check if cell coordinate is not out of range
