@@ -295,7 +295,7 @@ impl VirtualData {
     /// Insert a row to given index
     ///
     /// This can yield out of rnage error
-    pub fn insert_row(&mut self, row_index: usize, source: Option<&Vec<Value>>) -> DcsvResult<()> {
+    pub fn insert_row(&mut self, row_index: usize, source: Option<&[Value]>) -> DcsvResult<()> {
         if row_index > self.get_row_count() {
             return Err(DcsvError::InvalidColumn(format!(
                 "Cannot add row to out of range position : {}",
@@ -546,7 +546,7 @@ impl VirtualData {
     }
 
     /// Check if given values' length matches column's legnth
-    fn check_row_length(&self, values: &Vec<Value>) -> DcsvResult<()> {
+    fn check_row_length(&self, values: &[Value]) -> DcsvResult<()> {
         match self.get_column_count().cmp(&values.len()) {
             Ordering::Equal => (),
             Ordering::Less | Ordering::Greater => {
