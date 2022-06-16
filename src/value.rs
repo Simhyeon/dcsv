@@ -227,6 +227,7 @@ impl ValueLimiter {
         self.default.as_ref()
     }
 
+    // This return self.variant as ref so return value cannot be &[Value]
     pub fn get_variant(&self) -> Option<&Vec<Value>> {
         self.variant.as_ref()
     }
