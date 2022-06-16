@@ -2,7 +2,7 @@
 
 * [ ] Remove unnecessary reference of strings
 	* [ ] If internal method, don't make it generic if possible
-* [x] Vritual Array
+* [x] Vritual Array : This is mostly for CED's ergonomics.
 	* [x] Reader can read as array(VirtualArray) 
 	* [ ] Should check if things work. Test it in ced.
 * [x] Exposed reader\_option 
