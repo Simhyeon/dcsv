@@ -36,13 +36,15 @@ mod reader;
 mod test;
 pub mod utils;
 mod value;
+mod virtual_array;
 mod virtual_data;
 
-pub use error::DcsvError;
+pub use error::{DcsvError, DcsvResult};
 pub use reader::{Reader, ReaderOption};
 
 pub use value::LIMITER_ATTRIBUTE_LEN;
 pub use virtual_data::SCHEMA_HEADER;
 
 pub use value::{Value, ValueLimiter, ValueType};
+pub use virtual_array::VirtualArray;
 pub use virtual_data::{Column, ReadOnlyData, ReadOnlyDataRef, Row, VirtualData};
