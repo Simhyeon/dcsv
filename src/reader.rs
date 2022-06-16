@@ -3,6 +3,7 @@ use crate::parser::Parser;
 use crate::utils::ALPHABET;
 use crate::value::{Value, ValueType};
 use crate::virtual_data::VirtualData;
+use crate::VirtualArray;
 use std::io::BufRead;
 
 /// Csv Reader
@@ -12,7 +13,6 @@ use std::io::BufRead;
 pub struct Reader {
     option: ReaderOption,
     parser: Parser,
-    pub data: VirtualData,
 }
 
 impl Default for Reader {
@@ -26,7 +26,6 @@ impl Reader {
         Self {
             option: ReaderOption::new(),
             parser: Parser::new(),
-            data: VirtualData::new(),
         }
     }
 
@@ -94,7 +93,7 @@ impl Reader {
     /// Read csv value from buf read stream
     ///
     /// This return read value as virtual data struct
-    pub fn read_from_stream(&mut self, mut csv_stream: impl BufRead) -> DcsvResult<VirtualData> {
+    pub fn data_from_stream(&mut self, mut csv_stream: impl BufRead) -> DcsvResult<VirtualData> {
         let mut row_buffer: Vec<u8> = vec![];
         let line_delimiter = self.option.line_delimiter.unwrap_or('\n') as u8;
         self.parser.reset();
@@ -102,6 +101,7 @@ impl Reader {
         let mut num_bytes = csv_stream
             .read_until(line_delimiter, &mut row_buffer)
             .expect("Failed to read until");
+        let mut data = VirtualData::new();
         let mut row_count = 1;
         while num_bytes != 0 {
             // Create column
@@ -133,7 +133,7 @@ impl Reader {
                 }
 
                 // Add column header if column is empty
-                if self.data.get_column_count() == 0 {
+                if data.get_column_count() == 0 {
                     if !self.option.custom_header.is_empty() {
                         if self.option.custom_header.len() != row.len() {
                             return Err(DcsvError::InvalidColumn(format!(
@@ -143,14 +143,17 @@ impl Reader {
                             )));
                         }
                         let header = std::mem::take(&mut self.option.custom_header);
-                        self.add_multiple_columns(&header)?;
+                        add_multiple_columns(&mut data, &header)?;
                     } else if self.option.read_header {
                         if self.option.trim {
-                            self.add_multiple_columns_ref(
+                            // Trim row
+                            add_multiple_columns(
+                                &mut data,
                                 &row.iter().map(|s| s.trim()).collect::<Vec<_>>(),
                             )?;
                         } else {
-                            self.add_multiple_columns(&row)?;
+                            // Don't trim
+                            add_multiple_columns(&mut data, &row)?;
                         }
                         row_count += 1;
                         num_bytes = csv_stream
@@ -159,13 +162,13 @@ impl Reader {
                         continue;
                     } else {
                         // Create a header
-                        self.add_multiple_columns(&self.make_arbitrary_column(row.len()))?;
+                        add_multiple_columns(&mut data, &make_arbitrary_column(row.len()))?;
                     }
                 }
 
                 // Given row data has different length with column
-                if row.len() != self.data.get_column_count() {
-                    self.data.drop_data();
+                if row.len() != data.get_column_count() {
+                    data.drop_data();
                     return Err(DcsvError::InvalidRowData(format!(
                         "Row of line \"{}\" has different length.",
                         row_count
@@ -173,10 +176,10 @@ impl Reader {
                 }
 
                 if self.option.trim {
-                    self.add_row_fast_ref(&row.iter().map(|s| s.trim()).collect::<Vec<_>>())?;
+                    add_row_fast(&mut data, &row.iter().map(|s| s.trim()).collect::<Vec<_>>())?;
                 } else {
                     // Add as new row and proceed
-                    self.add_row_fast(&row)?;
+                    add_row_fast(&mut data, &row)?;
                 }
             }
 
@@ -188,66 +191,150 @@ impl Reader {
         }
 
         // complete move data as return value to comply borrow rules
-        Ok(std::mem::replace(&mut self.data, VirtualData::new()))
+        Ok(data)
     }
 
-    // -----
-    // <DRY>
-    // DRY Codes
-    fn add_row_fast<T: AsRef<str>>(&mut self, row: &[T]) -> DcsvResult<()> {
-        self.data.insert_row(
-            self.data.get_row_count(),
-            Some(
-                &row.iter()
-                    .map(|val| Value::Text(val.as_ref().to_string()))
-                    .collect::<Vec<_>>(),
-            ),
-        )?;
-        Ok(())
-    }
+    /// Read csv value from buf read stream
+    ///
+    /// This return read value as virtual data struct
+    pub fn array_from_stream(&mut self, mut csv_stream: impl BufRead) -> DcsvResult<VirtualArray> {
+        let mut row_buffer: Vec<u8> = vec![];
+        let line_delimiter = self.option.line_delimiter.unwrap_or('\n') as u8;
+        self.parser.reset();
 
-    fn add_row_fast_ref<T: AsRef<str>>(&mut self, row: &[T]) -> DcsvResult<()> {
-        self.data.insert_row(
-            self.data.get_row_count(),
-            Some(
-                &row.iter()
-                    .map(|val| Value::Text(val.as_ref().to_string()))
-                    .collect::<Vec<_>>(),
-            ),
-        )?;
-        Ok(())
-    }
+        let mut num_bytes = csv_stream
+            .read_until(line_delimiter, &mut row_buffer)
+            .expect("Failed to read until");
+        let mut data = VirtualArray::new();
+        let mut row_count = 1;
+        while num_bytes != 0 {
+            // Create column
+            // Create row or continue to next line.
+            let row = self.parser.feed_chunk(
+                std::mem::take(&mut row_buffer),
+                self.option.delimiter,
+                self.option.consume_dquote,
+            )?;
 
-    fn add_multiple_columns<T: AsRef<str>>(&mut self, column_names: &[T]) -> DcsvResult<()> {
-        for (idx, col) in column_names.iter().enumerate() {
-            self.data
-                .insert_column(idx, col.as_ref(), ValueType::Text, None, None)?;
+            // Row has been detected
+            if let Some(row) = row {
+                // This is a trailing value after new line
+                // Simply break
+                if row.len() == 1 && row[0].trim().is_empty() {
+                    // go to next line
+                    if self.option.ignore_empty_row {
+                        num_bytes = csv_stream
+                            .read_until(line_delimiter, &mut row_buffer)
+                            .expect("Failed to read until");
+                        row_count += 1;
+                        continue;
+                    } else {
+                        return Err(DcsvError::InvalidRowData(format!(
+                                    "Row of line \"{}\" has empty row. Which is unallowed by reader option.",
+                                    row_count + 1
+                        )));
+                    }
+                }
+
+                // Add column header if column is empty
+                if data.get_column_count() == 0 {
+                    if !self.option.custom_header.is_empty() {
+                        if self.option.custom_header.len() != row.len() {
+                            return Err(DcsvError::InvalidColumn(format!(
+                                "Custom value has different length. Given {} but needs {}",
+                                self.option.custom_header.len(),
+                                row.len()
+                            )));
+                        }
+                        let header = std::mem::take(&mut self.option.custom_header);
+                        data.columns = header;
+                    } else if self.option.read_header {
+                        if self.option.trim {
+                            data.columns =
+                                row.iter().map(|s| s.trim().to_string()).collect::<Vec<_>>();
+                        } else {
+                            data.columns = row;
+                        }
+                        row_count += 1;
+                        num_bytes = csv_stream
+                            .read_until(line_delimiter, &mut row_buffer)
+                            .expect("Failed to read until");
+                        continue;
+                    } else {
+                        // Create a header
+                        data.columns = make_arbitrary_column(row.len());
+                    }
+                }
+
+                // Given row data has different length with column
+                if row.len() != data.get_column_count() {
+                    data.drop_data();
+                    return Err(DcsvError::InvalidRowData(format!(
+                        "Row of line \"{}\" has different length.",
+                        row_count
+                    )));
+                }
+
+                if self.option.trim {
+                    data.insert_row(
+                        data.rows.len(),
+                        Some(&row.iter().map(|s| s.trim()).collect::<Vec<_>>()),
+                    )?;
+                } else {
+                    // Add as new row and proceed
+                    data.insert_row(data.rows.len(), Some(&row))?;
+                }
+            }
+
+            // advance row
+            row_count += 1;
+            num_bytes = csv_stream
+                .read_until(line_delimiter, &mut row_buffer)
+                .expect("Failed to read until");
         }
-        Ok(())
-    }
 
-    fn add_multiple_columns_ref<T: AsRef<str>>(&mut self, column_names: &[T]) -> DcsvResult<()> {
-        for (idx, col) in column_names.iter().enumerate() {
-            self.data
-                .insert_column(idx, col.as_ref(), ValueType::Text, None, None)?;
-        }
-        Ok(())
+        // complete move data as return value to comply borrow rules
+        Ok(data)
     }
-
-    fn make_arbitrary_column(&self, size: usize) -> Vec<String> {
-        let mut column_names: Vec<String> = vec![];
-        for index in 0..size {
-            let index = index + 1;
-            let target = ALPHABET[index % ALPHABET.len() - 1];
-            let name = target.repeat(index / ALPHABET.len() + 1);
-            column_names.push(name);
-        }
-        column_names
-    }
-
-    // </DRY>
-    // -----
 }
+
+// -----
+// <DRY>
+// DRY Codes
+fn add_row_fast<T: AsRef<str>>(data: &mut VirtualData, row: &[T]) -> DcsvResult<()> {
+    data.insert_row(
+        data.get_row_count(),
+        Some(
+            &row.iter()
+                .map(|val| Value::Text(val.as_ref().to_string()))
+                .collect::<Vec<_>>(),
+        ),
+    )?;
+    Ok(())
+}
+
+fn add_multiple_columns<T: AsRef<str>>(
+    data: &mut VirtualData,
+    column_names: &[T],
+) -> DcsvResult<()> {
+    for (idx, col) in column_names.iter().enumerate() {
+        data.insert_column(idx, col.as_ref(), ValueType::Text, None, None)?;
+    }
+    Ok(())
+}
+
+fn make_arbitrary_column(size: usize) -> Vec<String> {
+    let mut column_names: Vec<String> = vec![];
+    for index in 0..size {
+        let index = index + 1;
+        let target = ALPHABET[index % ALPHABET.len() - 1];
+        let name = target.repeat(index / ALPHABET.len() + 1);
+        column_names.push(name);
+    }
+    column_names
+}
+// </DRY>
+// -----
 
 /// Reader behaviour related options
 pub struct ReaderOption {
