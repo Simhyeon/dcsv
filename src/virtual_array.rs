@@ -117,11 +117,9 @@ impl VirtualArray {
     }
 
     /// Rename a column
-    ///
-    /// Column's name cannot be an exsiting name
     pub fn rename_column(&mut self, column_index: &str, new_name: &str) -> DcsvResult<()> {
         let column_index = Self::to_index(column_index)?;
-        let previous = self.columns[column_index] = new_name.to_owned();
+        self.columns[column_index] = new_name.to_owned();
         Ok(())
     }
 
@@ -146,7 +144,7 @@ impl VirtualArray {
     /// Edit a row
     ///
     /// Only edit row's cell when value is not none
-    pub fn edit_row(&mut self, row_index: usize, mut values: Vec<Option<&str>>) -> DcsvResult<()> {
+    pub fn edit_row(&mut self, row_index: usize, values: Vec<Option<&str>>) -> DcsvResult<()> {
         // Row's value doesn't match length of columns
         if values.len() != self.get_column_count() {
             return Err(DcsvError::InsufficientRowData);
@@ -159,7 +157,7 @@ impl VirtualArray {
 
         // It is safe to unwrap because row_number
         // was validated by is_valid_cell_coordinate method.
-        let row = self.rows[row_index];
+        let row = &mut self.rows[row_index];
         for (idx, v) in values.iter().enumerate() {
             if let Some(new_value) = v {
                 row[idx] = new_value.to_string();
@@ -194,16 +192,20 @@ impl VirtualArray {
         if !self.is_valid_cell_coordinate(x, y) {
             return Err(DcsvError::OutOfRangeError);
         }
-        let value = self.rows[x][y];
+        let value = &self.rows[x][y];
 
-        Ok(value.as_str())
+        Ok(value)
     }
 
     // THis should insert row with given column limiters
     /// Insert a row to given index
     ///
-    /// This can yield out of rnage error
-    pub fn insert_row(&mut self, row_index: usize, source: Option<&[&str]>) -> DcsvResult<()> {
+    /// This can yield out of range error
+    pub fn insert_row<T: AsRef<str>>(
+        &mut self,
+        row_index: usize,
+        source: Option<&[T]>,
+    ) -> DcsvResult<()> {
         if row_index > self.get_row_count() {
             return Err(DcsvError::InvalidColumn(format!(
                 "Cannot add row to out of range position : {}",
@@ -214,7 +216,10 @@ impl VirtualArray {
             self.check_row_length(source)?;
             self.rows.insert(
                 row_index,
-                source.iter().map(|v| v.to_string()).collect::<Vec<_>>(),
+                source
+                    .iter()
+                    .map(|v| v.as_ref().to_string())
+                    .collect::<Vec<_>>(),
             );
         } else {
             let row = vec![String::new(); self.columns.len()];
@@ -300,7 +305,7 @@ impl VirtualArray {
     }
 
     /// Check if given values' length matches column's legnth
-    fn check_row_length(&self, values: &[&str]) -> DcsvResult<()> {
+    fn check_row_length<T: AsRef<str>>(&self, values: &[T]) -> DcsvResult<()> {
         match self.get_column_count().cmp(&values.len()) {
             Ordering::Equal => (),
             Ordering::Less | Ordering::Greater => {
