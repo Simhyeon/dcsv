@@ -15,7 +15,9 @@ If you want higher wrapper around csv editing, use [ced](https://crates.io/crate
 - Edit csv values
 - Write to file
 
-## Usage
+## Basic usage
+
+Refer [Usage](./docs/usage.md) for more usages. But docs.rs is always better in general.
 
 ```toml
 [dependencies]
@@ -29,7 +31,7 @@ use std::fs::File;
 let data: VirtualData = Reader::new()
     .use_delimiter(';')      // Default is comma
     .use_line_delimiter('|') // Default is '\n, \r\n'
-    .read_from_stream(
+    .data_from_stream(
         BufReader::new(
             File::open("file_name.csv")
                 .expect("Failed to read file")
@@ -38,7 +40,7 @@ let data: VirtualData = Reader::new()
     .expect("Failed to retrieve csv value from file");
 
 // Refer docs.rs for various VirtualData methods
-let value : Option<&Value> = data.get_cell(1,1).expect("Failed to get cell");
+let value : Option<&Value> = data.get_cell(1,1);
 ```
 
 ## Why?

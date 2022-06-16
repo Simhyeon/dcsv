@@ -1,8 +1,15 @@
 # 0.2.0
 
+## Breaking changes
+
+- Changed method names : now "Reader" invokes "data\_from\_stream"
+- Get\_cell now returns option and don't panic on invalid cooridnate.
+
+## ETC
+
 - FET : VirtualArray
-- FET : "to_vec" for row
-- FET : New "custom_header" method for reader
+- FET : "to\_vec" for row
+- FET : New "custom\_header" method for reader
 - CHG : Changed "drop" method to "drop\_data"
 - ERG : More documentations for docs.rs
 - ERG : Applied clippy fix
