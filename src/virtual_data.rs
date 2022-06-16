@@ -274,11 +274,12 @@ impl VirtualData {
     }
 
     /// get cell data by coordinate
-    pub fn get_cell(&self, x: usize, y: usize) -> DcsvResult<Option<&Value>> {
-        let name = self.get_column_if_valid(x, y)?.name.to_owned();
-        let value = self.rows[x].get_cell_value(&name);
-
-        Ok(value)
+    pub fn get_cell(&self, x: usize, y: usize) -> Option<&Value> {
+        if let Ok(column) = self.get_column_if_valid(x, y) {
+            self.rows[x].get_cell_value(&column.name)
+        } else {
+            None
+        }
     }
 
     /// Set cell value by coordinate
