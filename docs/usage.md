@@ -21,7 +21,7 @@ let mut data: VirtualData = Reader::new()
     )
     .expect("Failed to retrieve csv value from file");
 
-let value : Option<&str> = data.get_cell(1,1);
+let value : Option<&Value> = data.get_cell(1,1);
 
 data.set_row(data.get_row_count(), vec![Value::Text("abc".to_string())])
 	.expect("Failed to set data into a row");
@@ -66,7 +66,7 @@ let mut data: VirtualArray = Reader::new()
     )
     .expect("Failed to retrieve csv value from file");
 
-let value : Option<&Value> = data.get_cell(1,1);
+let value : Option<&str> = data.get_cell(1,1);
 
 data.set_row(data.get_row_count(), vec![Value::Text("abc".to_string())])
 	.expect("Failed to set data into a row");
