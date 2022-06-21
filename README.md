@@ -17,7 +17,9 @@ If you want higher wrapper around csv editing, use [ced](https://crates.io/crate
 
 ## Basic usage
 
-Refer [Usage](./docs/usage.md) for more usages. But docs.rs is always better in general.
+Refer [Usage](./docs/usage.md) for more usages. Docs.rs is also useful in general.
+
+Include dcsv in cargo.toml file first.
 
 ```toml
 [dependencies]
@@ -25,7 +27,8 @@ dcsv = "*"
 ```
 
 ```rust
-use dcsv::{Reader, VirtualData, Value};
+// Trait VCont is required to use most methods
+use dcsv::{Reader, VirtualData, Value, VCont};
 use std::fs::File;
 
 let data: VirtualData = Reader::new()
@@ -39,6 +42,7 @@ let data: VirtualData = Reader::new()
     )
     .expect("Failed to retrieve csv value from file");
 
+// import VCont trait before use
 // Refer docs.rs for various VirtualData methods
 let value : Option<&Value> = data.get_cell(1,1);
 ```
