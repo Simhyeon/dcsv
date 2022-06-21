@@ -2,6 +2,9 @@
 
 * [ ] Remove unnecessary reference of strings
 	* [ ] If internal method, don't make it generic if possible
+* [x] Dcsv's ergonomics is really really... bad and confusing
+	* [x] Made it consistent
+* [x] Either create trait for both virtual array or virtual data, or simply make virtual array also be a value arrays
 * [x] Vritual Array : This is mostly for CED's ergonomics.
 	* [x] Reader can read as array(VirtualArray) 
 	* [ ] Should check if things work. Test it in ced.

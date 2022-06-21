@@ -1,4 +1,31 @@
-# VirtualData
+## Reader
+
+Reader is a special struct for reading values as csv struct. Create a reader
+and feed reader options to configure reading behaviours. 
+
+Reader's default behaviour is to let double quote untouched. Because double
+quote is concerned by other csv utilizing programs and could be confusing if
+ced strips double quotes. This can be countered with reader option though.
+
+```rust
+let reader: Reader = Reader::new()
+    .use_delimiter(';')      // Default is comma
+    .use_line_delimiter('|') // Default is '\n, \r\n'
+	.trim(true)
+	.has_header(true)
+	.ignore_newline(true)
+	.consume_dquote(true)
+	.custom_header(&["a","b","c"]); // Custom header overrides has_header option
+
+// Read as virtual_data
+let data = reader.data_from_stream(source.as_bytes())
+    .expect("Failed to read data");
+// Read as virtual_array
+let array = reader.array_from_stream(source.as_bytes())
+    .expect("Failed to read data");
+```
+
+## VirtualData
 
 Virtualdata is a wrapper around hashmap records. You can set limiter to set
 optional qualification logics. VirtualData is also faster in removing and
@@ -42,13 +69,11 @@ data.move_column(src, target)
 	.expect("Failed to relocate a column");
 ```
 
-# VirtualArray
+## VirtualArray
 
 VirtualArray is a simple wrapper around vectors of string arrays. ( Row:
 Vec<Vec<String>> ). VirtualArray is faster in indexing and allows
 duplicate column names.
-
-You cannot access column or row values with column name but always with index.
 
 ```rust
 
@@ -66,7 +91,7 @@ let mut data: VirtualArray = Reader::new()
     )
     .expect("Failed to retrieve csv value from file");
 
-let value : Option<&str> = data.get_cell(1,1);
+let value : Option<&Value> = data.get_cell(1,1);
 
 data.set_row(data.get_row_count(), vec![Value::Text("abc".to_string())])
 	.expect("Failed to set data into a row");

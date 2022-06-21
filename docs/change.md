@@ -1,6 +1,19 @@
+# 0.3.0
+
+### Breaking changes
+
+- CHG : Changed fields of ReadOnlyData and ReadOnlyDataRef from "string" to "Column"
+- CHG : Changed fields of virtual_array from "str" to "Value" for better compatibility
+- CHG : Changed from separate implementation to trait based generic implementation for both virtual structs
+
+### ETC
+
+- Cargo clippy fixes
+- Documentations
+
 # 0.2.0
 
-## Breaking changes
+### Breaking changes
 
 - Changed method names : now "Reader" invokes "data\_from\_stream" not "read\_from\_stream"
 - Get\_cell now returns option and don't panic on invalid cooridnate.
