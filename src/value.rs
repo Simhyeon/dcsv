@@ -12,7 +12,7 @@ pub const LIMITER_ATTRIBUTE_LEN: usize = 4;
 /// - Text is simply any data
 ///
 /// Dcsv doesn't support float type because float can change the "original" source while
-/// overriding. Since dcsv's goal is about safe manipulation of csv value float is not appropriate.
+/// overriding. Since dcsv's goal is about safe manipulation of csv value, float is not appropriate.
 #[derive(Clone, Eq, PartialEq, PartialOrd, Debug)]
 pub enum Value {
     Number(isize),
@@ -50,6 +50,10 @@ impl Value {
     }
 
     /// Create empty value
+    ///
+    /// Default values for each types are
+    /// - Number : 0
+    /// - Text : ""
     pub fn empty(value_type: ValueType) -> Self {
         match value_type {
             ValueType::Number => Self::Number(0),
