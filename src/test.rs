@@ -38,6 +38,16 @@ B,,";
         data.move_column(src, target)
             .expect("Failed to relocate a column");
 
+        let data: crate::VirtualData = Reader::new()
+            .use_delimiter(';') // Default is comma
+            .use_line_delimiter('|') // Default is '\n, \r\n'
+            .data_from_stream(BufReader::new(
+                File::open("file_name.csv").expect("Failed to read file"),
+            ))
+            .expect("Failed to retrieve csv value from file");
+
+        // Refer docs.rs for various VirtualData methods
+        let value: Option<&Value> = data.get_cell(1, 1);
         Ok(())
     }
 }
