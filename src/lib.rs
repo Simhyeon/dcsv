@@ -31,7 +31,7 @@
 ///     .expect("Failed to retrieve csv value from file");
 ///
 /// // Refer docs.rs for various VirtualData methods
-/// let value : Option<&Value> = data.get_cell(1,1).expect("Failed to get cell");
+/// let value : &Value = data.get_cell(1,1).expect("Failed to get cell");
 mod error;
 mod parser;
 mod reader;
