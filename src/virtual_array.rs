@@ -10,6 +10,7 @@ use std::cmp::Ordering;
 /// VirtualArray has two variables which are
 /// * columns
 /// * rows
+#[derive(Clone)]
 pub struct VirtualArray {
     pub columns: Vec<Column>,
     pub rows: Vec<Vec<Value>>,
