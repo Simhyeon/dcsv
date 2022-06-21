@@ -6,14 +6,11 @@ use std::collections::HashMap;
 
 pub const SCHEMA_HEADER: &str = "column,type,default,variant,pattern";
 
-/// Virtual data which contains csv information
+/// Virtual data struct which contains csv information
 ///
-/// VirtualData holds row information as hashmap. Therefore modifying data( cell, row or column ) is generally faster than virtual array struct.
-/// VirtualData also allows limiters to confine csv value's possible states.
-///
-/// Virtual data has two variables which are
-/// * columns
-/// * rows
+/// - VirtualData holds row information as hashmap. Therefore modifying data( cell, row or column ) is generally faster than virtual array struct.
+/// - VirtualData cannot have duplicate column name due to previous hashmap implementaiton
+/// - VirtualData allows limiters to confine csv value's possible states.
 #[derive(Clone)]
 pub struct VirtualData {
     pub columns: Vec<Column>,
@@ -382,6 +379,8 @@ impl VirtualData {
     }
 
     /// Set cell's value with given string value
+    ///
+    /// This will fail if the value cannot be converted to column's type
     pub fn set_cell_from_string(&mut self, x: usize, y: usize, value: &str) -> DcsvResult<()> {
         let key_column = self.get_column_if_valid(x, y)?;
         match key_column.column_type {
@@ -400,6 +399,8 @@ impl VirtualData {
     }
 
     /// Insert a column with given column informations
+    ///
+    /// # Args
     ///
     /// * column_index  : Position to put column
     /// * column_name   : New column name
@@ -439,6 +440,8 @@ impl VirtualData {
     }
 
     /// Set a limiter to a column
+    ///
+    /// # Args
     ///
     /// * column  : column's index
     /// * limiter : Target limiter
@@ -498,6 +501,14 @@ impl VirtualData {
     }
 
     /// Export virtual data's schema(limiter) as string form
+    ///
+    /// Schema is expressed as csv value. Each line is structured with following order.
+    ///
+    /// - column
+    /// - type
+    /// - default
+    /// - variant
+    /// - pattern
     pub fn export_schema(&self) -> String {
         let mut schema = format!("{}\n", SCHEMA_HEADER);
         for col in &self.columns {
@@ -552,6 +563,10 @@ impl VirtualData {
     }
 
     /// Check if cell coordinate is not out of range
+    ///
+    /// # Return
+    ///
+    /// True if given coordinate is within data's boundary, false if not.
     fn is_valid_cell_coordinate(&self, x: usize, y: usize) -> bool {
         if x < self.get_row_count() && y < self.get_column_count() {
             return true;
@@ -658,6 +673,7 @@ pub struct Column {
 }
 
 impl Column {
+    /// Create empty column with name
     pub fn empty(name: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -665,6 +681,8 @@ impl Column {
             limiter: ValueLimiter::default(),
         }
     }
+
+    /// Create new column with properties
     pub fn new(name: &str, column_type: ValueType, limiter: Option<ValueLimiter>) -> Self {
         Self {
             name: name.to_string(),
@@ -759,7 +777,8 @@ impl Row {
 
     /// Get comma separated row string
     ///
-    /// This requires columns because a row is not a linear container.
+    /// This requires columns because a row is not a linear container. Partial column is not an
+    /// error but valid behaviour.
     pub fn to_string(&self, columns: &[Column]) -> DcsvResult<String> {
         let mut acc = String::new();
         for col in columns {
@@ -793,17 +812,17 @@ impl Row {
         }
     }
 
-    /// Insert new cell(key, value pair) into a row
+    /// Insert a new cell(key, value pair) into a row
     pub fn insert_cell(&mut self, key: &str, value: Value) {
         self.values.insert(key.to_string(), value);
     }
 
-    /// Get cell value by key
+    /// Get a cell value by a key
     pub fn get_cell_value(&self, key: &str) -> Option<&Value> {
         self.values.get(key)
     }
 
-    /// Update cell's value with given value
+    /// Update a cell's value with a given value
     ///
     /// This doesn't fail and silently do nothing if key doesn't exist.
     pub fn update_cell_value(&mut self, key: &str, value: Value) {
@@ -812,7 +831,7 @@ impl Row {
         }
     }
 
-    /// Chagnes cell's value type
+    /// Chagnes a cell's value type
     ///
     /// This method tries to naturally convert cell's type.
     /// Empty text value defaults to "0".
@@ -845,7 +864,7 @@ impl Row {
         Ok(())
     }
 
-    /// Remove cell by key
+    /// Remove a cell by key
     pub fn remove_cell(&mut self, key: &str) {
         self.values.remove(key);
     }
@@ -853,13 +872,10 @@ impl Row {
 
 /// Read only data
 ///
-/// This is a cloned data from virtual_data and lifetime independent
-///
-/// * Columns : Vec<String>
-/// * rows    : Vec<Vec<String>>
+/// This is a cloned data from virtual_data, thus lifetime independent
 #[derive(Debug)]
 pub struct ReadOnlyData {
-    pub columns: Vec<String>,
+    pub columns: Vec<Column>,
     pub rows: Vec<Vec<Value>>,
 }
 
@@ -874,19 +890,19 @@ impl From<&VirtualData> for ReadOnlyData {
             rows.push(static_row);
         }
         Self {
-            columns: data.columns.iter().map(|c| c.name.clone()).collect(),
+            columns: data.columns.clone(),
             rows,
         }
     }
 }
 
-/// Borrowed read only data from virtual data
+/// Borrowed read only data from virtual_data
 ///
 /// * Columns : Vec<&str>
 /// * rows    : Vec<Vec<&Value>>
 #[derive(Debug)]
 pub struct ReadOnlyDataRef<'data> {
-    pub columns: Vec<&'data str>,
+    pub columns: Vec<&'data Column>,
     pub rows: Vec<Vec<&'data Value>>,
 }
 
@@ -896,7 +912,7 @@ impl<'data> ReadOnlyDataRef<'data> {
     /// This clones all information into a separate struct
     pub fn to_owned(&self) -> ReadOnlyData {
         ReadOnlyData {
-            columns: self.columns.iter().map(|c| c.to_string()).collect(),
+            columns: self.columns.iter().map(|&c| c.clone()).collect::<Vec<_>>(),
             rows: self
                 .rows
                 .iter()
@@ -917,7 +933,7 @@ impl<'data> From<&'data VirtualData> for ReadOnlyDataRef<'data> {
             rows.push(static_row);
         }
         Self {
-            columns: data.columns.iter().map(|c| c.name.as_str()).collect(),
+            columns: data.columns.iter().collect(),
             rows,
         }
     }
