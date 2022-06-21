@@ -1,9 +1,9 @@
 use crate::error::{DcsvError, DcsvResult};
 use crate::parser::Parser;
 use crate::utils::ALPHABET;
-use crate::value::{Value, ValueType};
+use crate::value::Value;
 use crate::virtual_data::VirtualData;
-use crate::{Column, VirtualArray};
+use crate::{Column, VCont, VirtualArray};
 use std::io::BufRead;
 
 /// Csv Reader
@@ -176,10 +176,10 @@ impl Reader {
                 }
 
                 if self.option.trim {
-                    add_row_fast(&mut data, &row.iter().map(|s| s.trim()).collect::<Vec<_>>())?;
+                    add_data_row(&mut data, &row.iter().map(|s| s.trim()).collect::<Vec<_>>())?;
                 } else {
                     // Add as new row and proceed
-                    add_row_fast(&mut data, &row)?;
+                    add_data_row(&mut data, &row)?;
                 }
             }
 
@@ -280,13 +280,10 @@ impl Reader {
                 }
 
                 if self.option.trim {
-                    data.insert_row(
-                        data.rows.len(),
-                        Some(&row.iter().map(|s| s.trim()).collect::<Vec<_>>()),
-                    )?;
+                    add_array_row(&mut data, &row.iter().map(|s| s.trim()).collect::<Vec<_>>())?;
                 } else {
                     // Add as new row and proceed
-                    data.insert_row(data.rows.len(), Some(&row))?;
+                    add_array_row(&mut data, &row)?;
                 }
             }
 
@@ -304,7 +301,19 @@ impl Reader {
 // -----
 // <DRY>
 // DRY Codes
-fn add_row_fast<T: AsRef<str>>(data: &mut VirtualData, row: &[T]) -> DcsvResult<()> {
+fn add_data_row<T: AsRef<str>>(data: &mut VirtualData, row: &[T]) -> DcsvResult<()> {
+    data.insert_row(
+        data.get_row_count(),
+        Some(
+            &row.iter()
+                .map(|val| Value::Text(val.as_ref().to_string()))
+                .collect::<Vec<_>>(),
+        ),
+    )?;
+    Ok(())
+}
+
+fn add_array_row<T: AsRef<str>>(data: &mut VirtualArray, row: &[T]) -> DcsvResult<()> {
     data.insert_row(
         data.get_row_count(),
         Some(
@@ -321,7 +330,7 @@ fn add_multiple_columns<T: AsRef<str>>(
     column_names: &[T],
 ) -> DcsvResult<()> {
     for (idx, col) in column_names.iter().enumerate() {
-        data.insert_column(idx, col.as_ref(), ValueType::Text, None, None)?;
+        data.insert_column(idx, col.as_ref())?;
     }
     Ok(())
 }

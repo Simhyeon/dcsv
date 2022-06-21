@@ -1,5 +1,6 @@
 use crate::error::{DcsvError, DcsvResult};
 use crate::value::{Value, ValueLimiter, ValueType};
+use crate::vcont::VCont;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
@@ -9,7 +10,6 @@ pub const SCHEMA_HEADER: &str = "column,type,default,variant,pattern";
 ///
 /// VirtualData holds row information as hashmap. Therefore modifying data( cell, row or column ) is generally faster than virtual array struct.
 /// VirtualData also allows limiters to confine csv value's possible states.
-/// Values in VirtualData can be indexed with either colum name or colum index.
 ///
 /// Virtual data has two variables which are
 /// * columns
@@ -26,48 +26,17 @@ impl Default for VirtualData {
     }
 }
 
-impl VirtualData {
+impl VCont for VirtualData {
     /// Create empty virtual data
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             columns: vec![],
             rows: vec![],
         }
     }
 
-    /// Get read only data from virtual data
-    ///
-    /// This clones every value into a ReadOnlyData.
-    /// If the purpose is to simply iterate over values, prefer read_only_ref method.
-    pub fn read_only(&self) -> ReadOnlyData {
-        ReadOnlyData::from(self)
-    }
-
-    /// Get read only data from virtual data, but as reference
-    pub fn read_only_ref(&self) -> ReadOnlyDataRef {
-        ReadOnlyDataRef::from(self)
-    }
-
-    /// Set cell's value with given string value
-    pub fn set_cell_from_string(&mut self, x: usize, y: usize, value: &str) -> DcsvResult<()> {
-        let key_column = self.get_column_if_valid(x, y)?;
-        match key_column.column_type {
-            ValueType::Text => self.set_cell(x, y, Value::Text(value.to_string())),
-            ValueType::Number => self.set_cell(
-                x,
-                y,
-                Value::Number(value.parse().map_err(|_| {
-                    DcsvError::InvalidCellData(format!(
-                        "Given value is \"{}\" which is not a number",
-                        value
-                    ))
-                })?),
-            ),
-        }
-    }
-
     /// Move given row to a target row index
-    pub fn move_row(&mut self, src_index: usize, target_index: usize) -> DcsvResult<()> {
+    fn move_row(&mut self, src_index: usize, target_index: usize) -> DcsvResult<()> {
         let row_count = self.get_row_count();
         if src_index >= row_count || target_index >= row_count {
             return Err(DcsvError::OutOfRangeError);
@@ -110,7 +79,7 @@ impl VirtualData {
     }
 
     /// Move a given column to target column index
-    pub fn move_column(&mut self, src_index: usize, target_index: usize) -> DcsvResult<()> {
+    fn move_column(&mut self, src_index: usize, target_index: usize) -> DcsvResult<()> {
         let column_count = self.get_column_count();
         if src_index >= column_count || target_index >= column_count {
             return Err(DcsvError::OutOfRangeError);
@@ -156,13 +125,12 @@ impl VirtualData {
     ///
     /// Column's name cannot be an exsiting name
     ///
-    /// * column   : either index or column name
+    /// * column   : column_index
     /// * new_name : New column name
-    pub fn rename_column(&mut self, column: &str, new_name: &str) -> DcsvResult<()> {
-        let column_index = self.try_get_column_index(column);
+    fn rename_column(&mut self, column_index: usize, new_name: &str) -> DcsvResult<()> {
         let next_column_index = self.try_get_column_index(new_name);
 
-        if column_index.is_none() {
+        if !self.is_valid_cell_coordinate(0, column_index) {
             return Err(DcsvError::OutOfRangeError);
         }
 
@@ -173,25 +141,23 @@ impl VirtualData {
             )));
         }
 
-        let previous = self.columns[column_index.unwrap()].rename(new_name);
+        let previous = self.columns[column_index].rename(new_name);
         for row in &mut self.rows {
             row.rename_column(&previous, new_name);
         }
         Ok(())
     }
 
-    // TODO
-    // 1. Check limiter
-    // 2. Check if value exists
     /// Set values to a column
     ///
     /// Given value will override every row's value
-    pub fn set_column(&mut self, column: &str, value: Value) -> DcsvResult<()> {
-        let column_index = self.try_get_column_index(column);
-        if column_index.is_none() {
+    fn set_column(&mut self, column_index: usize, value: Value) -> DcsvResult<()> {
+        if !self.is_valid_cell_coordinate(0, column_index) {
             return Err(DcsvError::OutOfRangeError);
         }
-        let column = &self.columns[column_index.unwrap()].name;
+
+        let column = &self.columns[column_index].name;
+
         for row in &mut self.rows {
             row.update_cell_value(column, value.clone());
         }
@@ -201,7 +167,7 @@ impl VirtualData {
     /// Edit a row
     ///
     /// Only edit row's cell when value is not none
-    pub fn edit_row(&mut self, row_index: usize, mut values: Vec<Option<Value>>) -> DcsvResult<()> {
+    fn edit_row(&mut self, row_index: usize, values: &[Option<Value>]) -> DcsvResult<()> {
         // Row's value doesn't match length of columns
         if values.len() != self.get_column_count() {
             return Err(DcsvError::InsufficientRowData);
@@ -224,14 +190,15 @@ impl VirtualData {
                 }
             }
         }
-        let col_value_iter = self.columns.iter().zip(values.iter_mut());
+
+        let col_value_iter = self.columns.iter().zip(values.iter());
 
         // It is safe to unwrap because row_number
         // was validated by is_valid_cell_coordinate method.
         let row = self.rows.get_mut(row_index).unwrap();
         for (col, value) in col_value_iter {
             if let Some(value) = value {
-                row.update_cell_value(&col.name, std::mem::take(value))
+                row.update_cell_value(&col.name, value.clone())
             }
         }
 
@@ -245,7 +212,7 @@ impl VirtualData {
     ///
     /// This assumes that given values accord to column's order.
     /// This method will fail when given value fails to qualify column's limiter.
-    pub fn set_row(&mut self, row_index: usize, values: Vec<Value>) -> DcsvResult<()> {
+    fn set_row(&mut self, row_index: usize, values: &[Value]) -> DcsvResult<()> {
         // Row's value doesn't match length of columns
         if values.len() != self.get_column_count() {
             return Err(DcsvError::InsufficientRowData);
@@ -278,7 +245,7 @@ impl VirtualData {
     }
 
     /// get cell data by coordinate
-    pub fn get_cell(&self, x: usize, y: usize) -> Option<&Value> {
+    fn get_cell(&self, x: usize, y: usize) -> Option<&Value> {
         if let Ok(column) = self.get_column_if_valid(x, y) {
             self.rows[x].get_cell_value(&column.name)
         } else {
@@ -287,7 +254,7 @@ impl VirtualData {
     }
 
     /// Set cell value by coordinate
-    pub fn set_cell(&mut self, x: usize, y: usize, value: Value) -> DcsvResult<()> {
+    fn set_cell(&mut self, x: usize, y: usize, value: Value) -> DcsvResult<()> {
         let name = self.get_column_if_valid(x, y)?.name.to_owned();
 
         self.is_valid_column_data(y, &value)?;
@@ -300,7 +267,7 @@ impl VirtualData {
     /// Insert a row to given index
     ///
     /// This can yield out of rnage error
-    pub fn insert_row(&mut self, row_index: usize, source: Option<&[Value]>) -> DcsvResult<()> {
+    fn insert_row(&mut self, row_index: usize, source: Option<&[Value]>) -> DcsvResult<()> {
         if row_index > self.get_row_count() {
             return Err(DcsvError::InvalidColumn(format!(
                 "Cannot add row to out of range position : {}",
@@ -331,15 +298,105 @@ impl VirtualData {
         Ok(())
     }
 
+    fn insert_column(&mut self, column_index: usize, column_name: &str) -> DcsvResult<()> {
+        if column_index > self.get_column_count() {
+            return Err(DcsvError::InvalidColumn(format!(
+                "Cannot add column to out of range position : {}",
+                column_index
+            )));
+        }
+        if self.try_get_column_index(column_name).is_some() {
+            return Err(DcsvError::InvalidColumn(format!(
+                "Cannot add existing column = \"{}\"",
+                column_name
+            )));
+        }
+        let new_column = Column::new(column_name, ValueType::Text, None);
+        let default_value = new_column.get_default_value();
+        for row in &mut self.rows {
+            row.insert_cell(&new_column.name, default_value.clone());
+        }
+        self.columns.insert(column_index, new_column);
+        Ok(())
+    }
+
     /// Delete a row with given row_index
     ///
     /// This doesn't fail but silently do nothing if index is out of range
-    pub fn delete_row(&mut self, row_index: usize) -> Option<Row> {
+    fn delete_row(&mut self, row_index: usize) -> bool {
         let row_count = self.get_row_count();
         if row_count == 0 || row_count < row_index {
-            return None;
+            return false;
         }
-        Some(self.rows.remove(row_index))
+        self.rows.remove(row_index);
+        true
+    }
+
+    /// Delete a column with given column index
+    fn delete_column(&mut self, column_index: usize) -> DcsvResult<()> {
+        let name = self.get_column_if_valid(0, column_index)?.name.to_owned();
+
+        for row in &mut self.rows {
+            row.remove_cell(&name);
+        }
+
+        self.columns.remove(column_index);
+
+        // If column is empty, drop all rows
+        if self.get_column_count() == 0 {
+            self.rows = vec![];
+        }
+
+        Ok(())
+    }
+
+    /// Get total rows count
+    fn get_row_count(&self) -> usize {
+        self.rows.len()
+    }
+
+    /// Get total columns count
+    fn get_column_count(&self) -> usize {
+        self.columns.len()
+    }
+
+    /// Drop all data from virtual data
+    fn drop_data(&mut self) {
+        self.columns.clear();
+        self.rows.clear();
+    }
+}
+
+impl VirtualData {
+    /// Get read only data from virtual data
+    ///
+    /// This clones every value into a ReadOnlyData.
+    /// If the purpose is to simply iterate over values, prefer read_only_ref method.
+    pub fn read_only(&self) -> ReadOnlyData {
+        ReadOnlyData::from(self)
+    }
+
+    /// Get read only data from virtual data, but as reference
+    pub fn read_only_ref(&self) -> ReadOnlyDataRef {
+        ReadOnlyDataRef::from(self)
+    }
+
+    /// Set cell's value with given string value
+    pub fn set_cell_from_string(&mut self, x: usize, y: usize, value: &str) -> DcsvResult<()> {
+        let key_column = self.get_column_if_valid(x, y)?;
+        match key_column.column_type {
+            ValueType::Text => self.set_cell(x, y, Value::Text(value.to_string())),
+            ValueType::Number => self.set_cell(
+                x,
+                y,
+                Value::Number(value.parse().map_err(|_| {
+                    DcsvError::InvalidCellData(format!(
+                        "Given value is \"{}\" which is not a number",
+                        value
+                    ))
+                })?),
+            ),
+        }
     }
 
     /// Insert a column with given column informations
@@ -349,7 +406,7 @@ impl VirtualData {
     /// * column_type   : Column's type
     /// * limiter       : Set limiter with
     /// * placeholder   : Placeholder will be applied to every row
-    pub fn insert_column(
+    pub fn insert_column_with_type(
         &mut self,
         column_index: usize,
         column_name: &str,
@@ -378,24 +435,6 @@ impl VirtualData {
             );
         }
         self.columns.insert(column_index, new_column);
-        Ok(())
-    }
-
-    /// Delete a column with given column index
-    pub fn delete_column(&mut self, column_index: usize) -> DcsvResult<()> {
-        let name = self.get_column_if_valid(0, column_index)?.name.to_owned();
-
-        for row in &mut self.rows {
-            row.remove_cell(&name);
-        }
-
-        self.columns.remove(column_index);
-
-        // If column is empty, drop all rows
-        if self.get_column_count() == 0 {
-            self.rows = vec![];
-        }
-
         Ok(())
     }
 
@@ -566,25 +605,6 @@ impl VirtualData {
     }
 
     // </DRY>
-
-    // <EXT>
-    /// Get total rows count
-    pub fn get_row_count(&self) -> usize {
-        self.rows.len()
-    }
-
-    /// Get total columns count
-    pub fn get_column_count(&self) -> usize {
-        self.columns.len()
-    }
-
-    /// Drop all data from virtual data
-    pub fn drop_data(&mut self) {
-        self.columns.clear();
-        self.rows.clear();
-    }
-
-    // </EXT>
 }
 
 /// to_string implementation for virtual data
