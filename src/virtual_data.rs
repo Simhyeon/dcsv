@@ -638,6 +638,13 @@ pub struct Column {
 }
 
 impl Column {
+    pub fn empty(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            column_type: ValueType::Text,
+            limiter: ValueLimiter::default(),
+        }
+    }
     pub fn new(name: &str, column_type: ValueType, limiter: Option<ValueLimiter>) -> Self {
         Self {
             name: name.to_string(),

@@ -3,7 +3,7 @@ use crate::parser::Parser;
 use crate::utils::ALPHABET;
 use crate::value::{Value, ValueType};
 use crate::virtual_data::VirtualData;
-use crate::VirtualArray;
+use crate::{Column, VirtualArray};
 use std::io::BufRead;
 
 /// Csv Reader
@@ -246,13 +246,15 @@ impl Reader {
                             )));
                         }
                         let header = std::mem::take(&mut self.option.custom_header);
-                        data.columns = header;
+                        data.columns = header.iter().map(|h| Column::empty(h)).collect::<Vec<_>>();
                     } else if self.option.read_header {
                         if self.option.trim {
-                            data.columns =
-                                row.iter().map(|s| s.trim().to_string()).collect::<Vec<_>>();
+                            data.columns = row
+                                .iter()
+                                .map(|s| Column::empty(s.trim()))
+                                .collect::<Vec<_>>();
                         } else {
-                            data.columns = row;
+                            data.columns = row.iter().map(|h| Column::empty(h)).collect::<Vec<_>>();
                         }
                         row_count += 1;
                         num_bytes = csv_stream
@@ -261,7 +263,10 @@ impl Reader {
                         continue;
                     } else {
                         // Create a header
-                        data.columns = make_arbitrary_column(row.len());
+                        data.columns = make_arbitrary_column(row.len())
+                            .iter()
+                            .map(|h| Column::empty(h))
+                            .collect::<Vec<_>>();
                     }
                 }
 

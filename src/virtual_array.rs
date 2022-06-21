@@ -1,4 +1,4 @@
-use crate::{DcsvError, DcsvResult, Value};
+use crate::{Column, DcsvError, DcsvResult, Value};
 use std::cmp::Ordering;
 
 /// Virtual data which contains csv information in a form of arrays.
@@ -11,7 +11,7 @@ use std::cmp::Ordering;
 /// * columns
 /// * rows
 pub struct VirtualArray {
-    pub columns: Vec<String>,
+    pub columns: Vec<Column>,
     pub rows: Vec<Vec<Value>>,
 }
 
@@ -129,7 +129,7 @@ impl VirtualArray {
     ///
     /// This will simply change the name of the column and doesn't affect rows.
     pub fn rename_column(&mut self, column_index: usize, new_name: &str) -> DcsvResult<()> {
-        self.columns[column_index] = new_name.to_owned();
+        self.columns[column_index].name = new_name.to_owned();
         Ok(())
     }
 
@@ -258,7 +258,8 @@ impl VirtualArray {
             )));
         }
 
-        self.columns.insert(column_index, column_name.to_owned());
+        self.columns
+            .insert(column_index, Column::empty(column_name));
         for row in &mut self.rows {
             row.insert(
                 column_index,
@@ -340,7 +341,13 @@ impl VirtualArray {
 impl std::fmt::Display for VirtualArray {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut csv_src = String::new();
-        let column_row = self.columns.join(",") + "\n";
+        let column_row = self
+            .columns
+            .iter()
+            .map(|s| s.name.as_str())
+            .collect::<Vec<_>>()
+            .join(",")
+            + "\n";
         csv_src.push_str(&column_row);
 
         let rows = self
