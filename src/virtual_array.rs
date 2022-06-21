@@ -1,4 +1,4 @@
-use crate::{DcsvError, DcsvResult};
+use crate::{DcsvError, DcsvResult, Value};
 use std::cmp::Ordering;
 
 /// Virtual data which contains csv information in a form of arrays.
@@ -12,7 +12,7 @@ use std::cmp::Ordering;
 /// * rows
 pub struct VirtualArray {
     pub columns: Vec<String>,
-    pub rows: Vec<Vec<String>>,
+    pub rows: Vec<Vec<Value>>,
 }
 
 impl Default for VirtualArray {
@@ -35,7 +35,7 @@ impl VirtualArray {
         if !self.is_valid_cell_coordinate(x, y) {
             return Err(DcsvError::OutOfRangeError);
         }
-        self.rows[x][y] = value.to_owned();
+        self.rows[x][y] = Value::Text(value.to_owned());
         Ok(())
     }
 
@@ -142,7 +142,7 @@ impl VirtualArray {
         }
 
         for row in &mut self.rows {
-            row[column_index] = value.to_owned();
+            row[column_index] = Value::Text(value.to_owned());
         }
         Ok(())
     }
@@ -166,7 +166,7 @@ impl VirtualArray {
         let row = &mut self.rows[row_index];
         for (idx, v) in values.iter().enumerate() {
             if let Some(new_value) = v {
-                row[idx] = new_value.to_string();
+                row[idx] = Value::Text(new_value.to_string());
             }
         }
 
@@ -183,12 +183,15 @@ impl VirtualArray {
         if !self.is_valid_cell_coordinate(row_index, 0) {
             return Err(DcsvError::OutOfRangeError);
         }
-        self.rows[row_index] = values.iter().map(|v| v.to_string()).collect::<Vec<_>>();
+        self.rows[row_index] = values
+            .iter()
+            .map(|v| Value::Text(v.to_string()))
+            .collect::<Vec<_>>();
         Ok(())
     }
 
     /// get cell data by coordinate
-    pub fn get_cell(&self, x: usize, y: usize) -> Option<&str> {
+    pub fn get_cell(&self, x: usize, y: usize) -> Option<&Value> {
         if !self.is_valid_cell_coordinate(x, y) {
             return None;
         }
@@ -217,11 +220,11 @@ impl VirtualArray {
                 row_index,
                 source
                     .iter()
-                    .map(|v| v.as_ref().to_string())
+                    .map(|v| Value::Text(v.as_ref().to_string()))
                     .collect::<Vec<_>>(),
             );
         } else {
-            let row = vec![String::new(); self.columns.len()];
+            let row = vec![Value::Text(String::new()); self.columns.len()];
             self.rows.insert(row_index, row);
         }
         Ok(())
@@ -257,7 +260,10 @@ impl VirtualArray {
 
         self.columns.insert(column_index, column_name.to_owned());
         for row in &mut self.rows {
-            row.insert(column_index, placeholder.unwrap_or("").to_owned());
+            row.insert(
+                column_index,
+                Value::Text(placeholder.unwrap_or("").to_owned()),
+            );
         }
         Ok(())
     }
@@ -340,7 +346,12 @@ impl std::fmt::Display for VirtualArray {
         let rows = self
             .rows
             .iter()
-            .map(|row| row.join(","))
+            .map(|row| {
+                row.iter()
+                    .map(|row| row.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            })
             .collect::<Vec<_>>()
             .join("\n");
         csv_src.push_str(&rows);
