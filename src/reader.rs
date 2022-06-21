@@ -10,6 +10,21 @@ use std::io::BufRead;
 ///
 /// User can set various reader option to configure a reading behaviour.
 /// Reader's options are not dropped after a read but persists for reader's lifetime.
+///
+/// # Usage
+///
+/// ```rust
+/// use dcsv::Reader;
+///
+/// let csv_value = "a,b,c
+/// 1,2,3";
+///
+/// let data = Reader::new()
+///    .trim(true)
+///    .ignore_empty_row(true)
+///    .has_header(true)
+///    .data_from_stream(csv_value.as_bytes());
+/// ```
 pub struct Reader {
     option: ReaderOption,
     parser: Parser,
