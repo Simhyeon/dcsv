@@ -13,6 +13,8 @@
 /// ## Usage
 ///
 /// ```rust
+/// // It is required to import VCont trait
+/// use dcsv::VCont;
 /// use dcsv::{Reader, VirtualData, Value};
 /// use std::io::BufReader;
 /// use std::fs::File;
@@ -20,7 +22,7 @@
 /// let data: VirtualData = Reader::new()
 ///     .use_delimiter(';')      // Default is comma
 ///     .use_line_delimiter('|') // Default is '\n, \r\n'
-///     .read_from_stream(
+///     .data_from_stream(
 ///         BufReader::new(
 ///             File::open("file_name.csv")
 ///                 .expect("Failed to read file")

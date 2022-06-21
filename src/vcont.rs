@@ -1,6 +1,9 @@
 /// VCont is a generic trait for various virtual csv structs
 use crate::{DcsvResult, Value};
 
+/// Generic trait over both virtual_data and virtual_array
+///
+/// This provides some genral methods over csv value manipulation
 pub trait VCont {
     /// Create empty virtual container
     fn new() -> Self;
