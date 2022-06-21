@@ -3,12 +3,9 @@ use std::cmp::Ordering;
 
 /// Virtual data which contains csv information in a form of arrays.
 ///
-/// VirtualArray holds row information as vectors. Therefore indexing is generally faster than virtual data struct.
-/// VirtualArray doesn't allow limiters.
-///
-/// VirtualArray has two variables which are
-/// * columns
-/// * rows
+/// - VirtualArray holds row information as vectors. Therefore indexing is generally faster than virtual data struct.
+/// - VirtualArray allows duplicate columns
+/// - VirtualArray doesn't allow limiters.
 #[derive(Clone)]
 pub struct VirtualArray {
     pub columns: Vec<Column>,
@@ -304,25 +301,6 @@ impl VirtualArray {
     }
 
     // </DRY>
-
-    // <EXT>
-    /// Get total rows count
-    pub fn get_row_count(&self) -> usize {
-        self.rows.len()
-    }
-
-    /// Get total columns count
-    pub fn get_column_count(&self) -> usize {
-        self.columns.len()
-    }
-
-    /// Drop all data from virtual data
-    pub fn drop_data(&mut self) {
-        self.columns.clear();
-        self.rows.clear();
-    }
-
-    // </EXT>
 }
 
 /// to_string implementation for virtual array
