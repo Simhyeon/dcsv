@@ -54,4 +54,7 @@ pub trait VCont {
 
     /// Drop all data from virtual data
     fn drop_data(&mut self);
+
+    /// Apply closure to all values
+    fn apply_all<F: FnMut(&mut Value)>(&mut self, f: F);
 }
