@@ -273,6 +273,14 @@ impl VCont for VirtualArray {
         self.rows[row_index] = values.to_vec();
         Ok(())
     }
+
+    fn apply_all<F: FnMut(&mut Value)>(&mut self, mut f: F) {
+        for row in &mut self.rows {
+            for value in row {
+                f(value)
+            }
+        }
+    }
 }
 
 impl VirtualArray {

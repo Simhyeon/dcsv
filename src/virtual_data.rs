@@ -362,6 +362,14 @@ impl VCont for VirtualData {
         self.columns.clear();
         self.rows.clear();
     }
+
+    fn apply_all<F: FnMut(&mut Value)>(&mut self, mut f: F) {
+        for row in &mut self.rows {
+            for value in row.values.values_mut() {
+                f(value)
+            }
+        }
+    }
 }
 
 impl VirtualData {
@@ -745,6 +753,15 @@ impl Column {
 #[derive(Clone, Debug)]
 pub struct Row {
     pub values: HashMap<String, Value>,
+}
+
+impl IntoIterator for Row {
+    type Item = (String, Value);
+    type IntoIter = std::collections::hash_map::IntoIter<String, Value>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.values.into_iter()
+    }
 }
 
 impl Default for Row {
