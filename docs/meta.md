@@ -1,8 +1,5 @@
 ## TODO
 
-* [x] Qualify logics for dcsv in-built in
-* [x] Get iterator for row
-* [x] Get iterator for dcsv
 * [ ] Remove unnecessary reference of strings
 	* [ ] If internal method, don't make it generic if possible
 
@@ -49,3 +46,6 @@ names.
 * [x] Custom header
 * [x] Clippied the source code
 * [x] Make virtual data's api more ergonomic for library usage
+* [x] Qualify logics for dcsv in-built in
+* [x] Get iterator for row
+* [x] Get iterator for dcsv
