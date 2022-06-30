@@ -363,6 +363,7 @@ impl VCont for VirtualData {
         self.rows.clear();
     }
 
+    /// Apply closure to all values
     fn apply_all<F: FnMut(&mut Value)>(&mut self, mut f: F) {
         for row in &mut self.rows {
             for value in row.values.values_mut() {
@@ -508,6 +509,54 @@ impl VirtualData {
         Ok(())
     }
 
+    /// Qualify data and get reference of qualifed rows.
+    pub fn qualify(&self, column: usize, limiter: &ValueLimiter) -> DcsvResult<Vec<&Row>> {
+        let mut rows = vec![];
+        let column = &self.columns[column];
+        for row in &self.rows {
+            if let Some(value) = row.get_cell_value(&column.name) {
+                // Check if value qualify limiter condition
+                if limiter.qualify(value) {
+                    rows.push(row)
+                }
+            } else {
+                return Err(DcsvError::InvalidRowData(
+                    "Failed to get row data while qualifying".to_string(),
+                ));
+            }
+        }
+        Ok(rows)
+    }
+
+    /// Qualify data with multiple limiters and get reference of qualifed rows.
+    pub fn qualify_multiple(
+        &self,
+        qualifiers: Vec<(usize, &ValueLimiter)>,
+    ) -> DcsvResult<Vec<&Row>> {
+        let mut rows = vec![];
+        // Rows loop
+        'outer: for row in &self.rows {
+            // Values loop in
+            for (column, limiter) in &qualifiers {
+                let column = &self.columns[*column];
+                if let Some(value) = row.get_cell_value(&column.name) {
+                    // Check if value qualify limiter condition
+                    if !limiter.qualify(value) {
+                        continue 'outer;
+                    }
+                } else {
+                    return Err(DcsvError::InvalidRowData(
+                        "Failed to get row data while qualifying".to_string(),
+                    ));
+                }
+            }
+
+            // Only push if all qualifiers suceeded.
+            rows.push(row);
+        }
+        Ok(rows)
+    }
+
     /// Export virtual data's schema(limiter) as string form
     ///
     /// Schema is expressed as csv value. Each line is structured with following order.
@@ -625,6 +674,24 @@ impl VirtualData {
             }
         }
         Ok(())
+    }
+
+    pub fn get_iterator(&self) -> std::vec::IntoIter<&Value> {
+        let columns = &self.columns;
+        let mut iterate = vec![];
+        for row in &self.rows {
+            iterate.extend(row.get_iterator(columns));
+        }
+        iterate.into_iter()
+    }
+
+    pub fn get_row_iterator(&self, row_index: usize) -> DcsvResult<std::vec::IntoIter<&Value>> {
+        let columns = &self.columns;
+        Ok(self
+            .rows
+            .get(row_index)
+            .ok_or(DcsvError::OutOfRangeError)?
+            .get_iterator(columns))
     }
 
     // </DRY>
@@ -755,15 +822,6 @@ pub struct Row {
     pub values: HashMap<String, Value>,
 }
 
-impl IntoIterator for Row {
-    type Item = (String, Value);
-    type IntoIter = std::collections::hash_map::IntoIter<String, Value>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.values.into_iter()
-    }
-}
-
 impl Default for Row {
     fn default() -> Self {
         Self::new()
@@ -884,6 +942,16 @@ impl Row {
     /// Remove a cell by key
     pub fn remove_cell(&mut self, key: &str) {
         self.values.remove(key);
+    }
+
+    pub fn get_iterator(&self, columns: &[Column]) -> std::vec::IntoIter<&Value> {
+        let mut iterate = vec![];
+        for col in columns {
+            if let Some(value) = self.values.get(&col.name) {
+                iterate.push(value);
+            }
+        }
+        iterate.into_iter()
     }
 }
 
