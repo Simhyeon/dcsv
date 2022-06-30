@@ -676,6 +676,9 @@ impl VirtualData {
         Ok(())
     }
 
+    /// Get iterator.
+    ///
+    /// This methods returns iterator which respects column orders
     pub fn get_iterator(&self) -> std::vec::IntoIter<&Value> {
         let columns = &self.columns;
         let mut iterate = vec![];
@@ -685,6 +688,9 @@ impl VirtualData {
         iterate.into_iter()
     }
 
+    /// Get iterator of a row with given index
+    ///
+    /// This respects  columns orders
     pub fn get_row_iterator(&self, row_index: usize) -> DcsvResult<std::vec::IntoIter<&Value>> {
         let columns = &self.columns;
         Ok(self
@@ -944,6 +950,7 @@ impl Row {
         self.values.remove(key);
     }
 
+    /// Get iterator with given columns
     pub fn get_iterator(&self, columns: &[Column]) -> std::vec::IntoIter<&Value> {
         let mut iterate = vec![];
         for col in columns {
