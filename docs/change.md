@@ -1,3 +1,8 @@
+# 0.3.1
+
+- FET : Get iterator method for virtual data and row struct
+- FET : Qualify and qualify multiple methods for virtual data
+
 # 0.3.0
 
 ### Breaking changes
