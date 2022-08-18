@@ -1,3 +1,6 @@
+/// Reader reads and parses given string into a csv struct
+///
+/// You can also configure reader with multiple builder methods
 use crate::error::{DcsvError, DcsvResult};
 use crate::parser::Parser;
 use crate::utils::ALPHABET;
@@ -70,6 +73,12 @@ impl Reader {
         self
     }
 
+    /// Allow invalid string while parsing csv values
+    pub fn allow_invalid_string(mut self, allow: bool) -> Self {
+        self.option.allow_invalid_string = allow;
+        self
+    }
+
     /// Whether csv data has header or not
     pub fn has_header(mut self, has_header: bool) -> Self {
         self.option.read_header = has_header;
@@ -125,6 +134,7 @@ impl Reader {
                 std::mem::take(&mut row_buffer),
                 self.option.delimiter,
                 self.option.consume_dquote,
+                self.option.allow_invalid_string,
             )?;
 
             // Row has been detected
@@ -164,7 +174,7 @@ impl Reader {
                             // Trim row
                             add_multiple_columns(
                                 &mut data,
-                                &row.iter().map(|s| s.trim()).collect::<Vec<_>>(),
+                                &row.iter().map(|s| s.trim().to_owned()).collect::<Vec<_>>(),
                             )?;
                         } else {
                             // Don't trim
@@ -191,10 +201,13 @@ impl Reader {
                 }
 
                 if self.option.trim {
-                    add_data_row(&mut data, &row.iter().map(|s| s.trim()).collect::<Vec<_>>())?;
+                    add_data_row(
+                        &mut data,
+                        row.iter().map(|s| s.trim().to_string()).collect::<Vec<_>>(),
+                    )?;
                 } else {
                     // Add as new row and proceed
-                    add_data_row(&mut data, &row)?;
+                    add_data_row(&mut data, row)?;
                 }
             }
 
@@ -228,6 +241,7 @@ impl Reader {
                 std::mem::take(&mut row_buffer),
                 self.option.delimiter,
                 self.option.consume_dquote,
+                self.option.allow_invalid_string,
             )?;
 
             // Row has been detected
@@ -295,10 +309,13 @@ impl Reader {
                 }
 
                 if self.option.trim {
-                    add_array_row(&mut data, &row.iter().map(|s| s.trim()).collect::<Vec<_>>())?;
+                    add_array_row(
+                        &mut data,
+                        row.iter().map(|s| s.trim().to_owned()).collect::<Vec<_>>(),
+                    )?;
                 } else {
                     // Add as new row and proceed
-                    add_array_row(&mut data, &row)?;
+                    add_array_row(&mut data, row)?;
                 }
             }
 
@@ -316,40 +333,41 @@ impl Reader {
 // -----
 // <DRY>
 // DRY Codes
-fn add_data_row<T: AsRef<str>>(data: &mut VirtualData, row: &[T]) -> DcsvResult<()> {
+/// add new data row into a virtual data
+fn add_data_row(data: &mut VirtualData, mut row: Vec<String>) -> DcsvResult<()> {
     data.insert_row(
         data.get_row_count(),
         Some(
-            &row.iter()
-                .map(|val| Value::Text(val.as_ref().to_string()))
+            &row.iter_mut()
+                .map(|val| Value::Text(std::mem::take(val)))
                 .collect::<Vec<_>>(),
         ),
     )?;
     Ok(())
 }
 
-fn add_array_row<T: AsRef<str>>(data: &mut VirtualArray, row: &[T]) -> DcsvResult<()> {
+/// add new data row into a virtual array
+fn add_array_row(data: &mut VirtualArray, mut row: Vec<String>) -> DcsvResult<()> {
     data.insert_row(
         data.get_row_count(),
         Some(
-            &row.iter()
-                .map(|val| Value::Text(val.as_ref().to_string()))
+            &row.iter_mut()
+                .map(|val| Value::Text(std::mem::take(val)))
                 .collect::<Vec<_>>(),
         ),
     )?;
     Ok(())
 }
 
-fn add_multiple_columns<T: AsRef<str>>(
-    data: &mut VirtualData,
-    column_names: &[T],
-) -> DcsvResult<()> {
+/// Add multiple columns with given names
+fn add_multiple_columns(data: &mut VirtualData, column_names: &[String]) -> DcsvResult<()> {
     for (idx, col) in column_names.iter().enumerate() {
         data.insert_column(idx, col.as_ref())?;
     }
     Ok(())
 }
 
+/// Create arbitrary column names
 fn make_arbitrary_column(size: usize) -> Vec<String> {
     let mut column_names: Vec<String> = vec![];
     for index in 0..size {
@@ -372,6 +390,7 @@ pub struct ReaderOption {
     pub delimiter: Option<char>,
     pub line_delimiter: Option<char>,
     pub ignore_empty_row: bool,
+    pub allow_invalid_string: bool,
 }
 
 impl Default for ReaderOption {
@@ -381,6 +400,7 @@ impl Default for ReaderOption {
 }
 
 impl ReaderOption {
+    /// Constructor
     pub fn new() -> Self {
         Self {
             trim: false,
@@ -390,6 +410,7 @@ impl ReaderOption {
             delimiter: None,
             line_delimiter: None,
             ignore_empty_row: false,
+            allow_invalid_string: false,
         }
     }
 }
