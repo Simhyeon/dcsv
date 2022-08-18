@@ -6,6 +6,7 @@ use crate::vcont::VCont;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
+/// Header for csv schema
 pub const SCHEMA_HEADER: &str = "column,type,default,variant,pattern";
 
 /// Virtual data struct which contains csv information
