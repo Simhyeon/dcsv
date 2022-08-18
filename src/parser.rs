@@ -33,10 +33,15 @@ impl Parser {
         chunk: Vec<u8>,
         delim: Option<char>,
         consume_dquote: bool,
+        allow_invalid_string: bool,
     ) -> DcsvResult<Option<Vec<String>>> {
-        let line = String::from_utf8(chunk)
-            .expect("Failed to convert to string")
-            .replace("\r\n", "\n");
+        let line = if allow_invalid_string {
+            String::from_utf8_lossy(&chunk).replace("\r\n", "\n")
+        } else {
+            String::from_utf8(chunk)
+                .expect("Failed to convert to string")
+                .replace("\r\n", "\n")
+        };
         let mut previous = '0';
         let mut value = std::mem::take(&mut self.remnant);
         let mut iter = line.chars().peekable();
