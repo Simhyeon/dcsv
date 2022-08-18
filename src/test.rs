@@ -1,10 +1,12 @@
-/// Test multiple csv formats
+//! Test multiple csv formats
 
+/// Simple test module
 #[cfg(test)]
 mod testos {
     use crate::{DcsvResult, Reader};
     use std::io::BufRead;
 
+    /// Read multiple csv files and check if panics
     #[test]
     fn read_csv() -> DcsvResult<()> {
         let files =

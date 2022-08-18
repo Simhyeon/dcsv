@@ -1,7 +1,9 @@
+//! Virtual array module
+
 use crate::{vcont::VCont, Column, DcsvError, DcsvResult, Value};
 use std::cmp::Ordering;
 
-/// Virtual data which contains csv information in a form of arrays.
+/// Virtual array which contains csv information in a form of arrays.
 ///
 /// - VirtualArray holds row information as vectors. Therefore indexing is generally faster than virtual data struct.
 /// - VirtualArray allows duplicate columns
@@ -307,8 +309,6 @@ impl VirtualArray {
         }
         Ok(())
     }
-
-    // </DRY>
 }
 
 /// to_string implementation for virtual array

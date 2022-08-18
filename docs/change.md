@@ -1,3 +1,10 @@
+# 0.3.2
+
+* [x] Allow invalid string with reader option
+* [x] Test script for various formats of csv testing
+* [x] Remove unnecessary generics from internal methods for compilation speed
+* [x] Make document rate to be 100%
+
 # 0.3.1
 
 - FET : Get iterator method for virtual data and row struct

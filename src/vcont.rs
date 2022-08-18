@@ -1,4 +1,5 @@
-/// VCont is a generic trait for various virtual csv structs
+//! VCont is a generic trait for various virtual csv structs
+
 use crate::{DcsvResult, Value};
 
 /// Generic trait over both virtual_data and virtual_array

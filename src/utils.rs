@@ -1,5 +1,8 @@
+//! Utility methods
+
 use crate::error::DcsvResult;
 
+/// Alphabet array to create random column names
 pub(crate) const ALPHABET: [&str; 26] = [
     "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s",
     "t", "u", "v", "w", "x", "y", "z",
@@ -7,7 +10,7 @@ pub(crate) const ALPHABET: [&str; 26] = [
 
 /// Try getting csv row from split iterator
 ///
-/// This will retur None when fails to get csv row
+/// This will return None when fails to get csv row
 pub fn csv_row_from_split(
     split: Option<&std::io::Result<Vec<u8>>>,
     delimiter: Option<char>,

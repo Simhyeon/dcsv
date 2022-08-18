@@ -1,8 +1,12 @@
-use std::{fmt::Display, str::FromStr};
+//! Value is a basic unit of csv struct
+//!
+//! Value can be either number or text.
 
 use crate::error::{DcsvError, DcsvResult};
 use regex::Regex;
+use std::{fmt::Display, str::FromStr};
 
+/// Length of limiter's attributes
 pub const LIMITER_ATTRIBUTE_LEN: usize = 4;
 
 /// Basic component of virtual data
@@ -219,23 +223,27 @@ impl ValueLimiter {
         Ok(limiter)
     }
 
+    /// Get type
     pub fn get_type(&self) -> ValueType {
         self.value_type
     }
 
+    /// Set type
     pub fn set_type(&mut self, column_type: ValueType) {
         self.value_type = column_type;
     }
 
+    /// Get default value from limiter
     pub fn get_default(&self) -> Option<&Value> {
         self.default.as_ref()
     }
 
-    // This return self.variant as ref so return value cannot be &[Value]
+    /// Return variant reference
     pub fn get_variant(&self) -> Option<&Vec<Value>> {
         self.variant.as_ref()
     }
 
+    /// Set variant
     pub fn set_variant(&mut self, default: Value, variants: &[Value]) -> DcsvResult<()> {
         if !variants.contains(&default) {
             return Err(DcsvError::InvalidLimiter(
@@ -247,10 +255,12 @@ impl ValueLimiter {
         Ok(())
     }
 
+    /// Get pattern
     pub fn get_pattern(&self) -> Option<&Regex> {
         self.pattern.as_ref()
     }
 
+    /// Set pattern
     pub fn set_pattern(&mut self, default: Value, pattern: Regex) -> DcsvResult<()> {
         if !pattern.is_match(&default.to_string()) {
             return Err(DcsvError::InvalidLimiter(

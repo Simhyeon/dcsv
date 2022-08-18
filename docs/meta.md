@@ -1,9 +1,6 @@
 ## TODO
-
-* [ ] Remove unnecessary reference of strings
-	* [ ] If internal method, don't make it generic if possible
-
-* [ ] Test various formats of csv data
+$todo_start()
+$todo_end()
 
 ## How csv reader is different from ced?
 
@@ -14,6 +11,8 @@ But the thing is ced uses virtual data structure which incorporates value
 limiter with values. So that value has some kind of types. Also virtual data assumes there can be editing which is not necessarily a pure purpose of csv\_reader
 
 ## DONE
+
+---
 
 * [x] Add internal **read from bytestream** method for virtual data.
 * [x] Test line delimiter

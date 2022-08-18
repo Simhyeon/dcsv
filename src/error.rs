@@ -1,3 +1,5 @@
+//! Error variants
+
 pub type DcsvResult<T> = Result<T, DcsvError>;
 
 /// Error types for dcsv related operations.
@@ -36,12 +38,14 @@ impl DcsvError {
     }
 }
 
+/// Specific error struct with meta information
 pub struct IoErrorWithMeta {
     error: std::io::Error,
     meta: String,
 }
 
 impl IoErrorWithMeta {
+    /// Create a new instance
     pub fn new(error: std::io::Error, meta: &str) -> Self {
         Self {
             error,

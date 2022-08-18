@@ -1,6 +1,7 @@
-/// Reader reads and parses given string into a csv struct
-///
-/// You can also configure reader with multiple builder methods
+//! Reader reads and parses given string into a csv struct
+//!
+//! You can also configure reader with multiple builder methods
+
 use crate::error::{DcsvError, DcsvResult};
 use crate::parser::Parser;
 use crate::utils::ALPHABET;

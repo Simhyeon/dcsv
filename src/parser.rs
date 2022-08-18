@@ -1,6 +1,8 @@
+//! CSV parser
+
 use crate::error::DcsvResult;
 
-/// Csv line parser
+/// CSV line parser
 pub(crate) struct Parser {
     pub(crate) container: Vec<String>,
     pub(crate) remnant: String,
@@ -9,6 +11,7 @@ pub(crate) struct Parser {
 }
 
 impl Parser {
+    /// Create a new instance
     pub fn new() -> Self {
         Self {
             container: vec![],
@@ -18,6 +21,7 @@ impl Parser {
         }
     }
 
+    /// Reset parser states
     pub fn reset(&mut self) {
         self.container.clear();
         self.remnant = String::new();
@@ -28,6 +32,9 @@ impl Parser {
     ///
     /// This will return Some when chunk composes a fully line.
     /// A complete line is deteced when line_delimiter is met.
+    ///
+    /// Keep in mind that csv value might have a line delimiter other than a
+    /// newline
     pub fn feed_chunk(
         &mut self,
         chunk: Vec<u8>,

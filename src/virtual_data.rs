@@ -1,3 +1,5 @@
+//! Virtual data module
+
 use crate::error::{DcsvError, DcsvResult};
 use crate::value::{Value, ValueLimiter, ValueType};
 use crate::vcont::VCont;
@@ -835,6 +837,7 @@ impl Default for Row {
 }
 
 impl Row {
+    /// Create a new row
     pub fn new() -> Self {
         Self {
             values: HashMap::new(),
