@@ -1,38 +1,31 @@
+/// Test multiple csv formats
+
 #[cfg(test)]
 mod testos {
-    use std::{fs::File, io::BufReader};
-
-    use crate::{DcsvResult, Reader, ReaderOption, VCont, Value, VirtualArray, VirtualData};
+    use crate::{DcsvResult, Reader};
+    use std::io::BufRead;
 
     #[test]
     fn read_csv() -> DcsvResult<()> {
-        let csv_value = "a,b,c
-b,2,4
-A,,
-B,,";
-
-        let mut data: VirtualData = Reader::new()
-            .data_from_stream(csv_value.as_bytes())
-            .expect("Failed to retrieve csv value from file");
-
-        data.apply_all(|value| {
-            if let Value::Text(v) = value {
-                v.push('~');
-            }
-        });
-
-        println!("{}", data);
-
-        // Refer docs.rs for various VirtualData methods
-        let value: Option<&Value> = data.get_cell(1, 1);
-
-        for (idx, value) in data.get_iterator().enumerate() {
-            println!("{} - {}", idx, value);
+        let files =
+            std::io::BufReader::new(std::fs::File::open("test_files").expect("Failed wow..."));
+        for line in files.lines() {
+            let line = line.expect("Wowzer");
+            Reader::new().data_from_stream(&*std::fs::read(line).expect("Welp"))?;
         }
 
-        for (idx, value) in data.get_row_iterator(2)?.enumerate() {
-            println!("{} - {}", idx, value);
-        }
+        // Reader specific reads
+        // Old MacOS LF Lined ending file
+        Reader::new()
+            .ignore_empty_row(true)
+            .use_line_delimiter('\r')
+            .data_from_stream(&*std::fs::read("test_src/lf_line_ending.csv").expect("Welp"))?;
+
+        // Trailing newline file
+        Reader::new().ignore_empty_row(true).data_from_stream(
+            &*std::fs::read("test_src/trailing_nl_with_dquotes.csv").expect("Welp"),
+        )?;
+
         Ok(())
     }
 }
