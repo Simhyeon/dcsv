@@ -12,7 +12,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```no_run
 //! // It is required to import VCont trait
 //! use dcsv::VCont;
 //! use dcsv::{Reader, VirtualData, Value};
