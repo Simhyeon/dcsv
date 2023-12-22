@@ -1,3 +1,7 @@
+# 0.3.3
+
+- Updated reegx version
+
 # 0.3.2
 
 * [x] Allow invalid string with reader option
