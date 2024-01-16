@@ -247,7 +247,7 @@ impl VCont for VirtualData {
         let row = self.rows.get_mut(row_index).unwrap();
         for ((idx, col), value) in col_value_iter {
             self.column_meta[idx].update_width(value);
-            row.update_cell_value(&col.name, value.clone())
+            row.update_cell_value(&col.name, value.clone());
         }
 
         Ok(())
@@ -348,7 +348,29 @@ impl VCont for VirtualData {
         if row_count == 0 || row_count < row_index {
             return false;
         }
-        self.rows.remove(row_index);
+        let removed = self.rows.remove(row_index);
+        let to_be_updated_colum_index = removed
+            .get_iterator(&self.columns)
+            .enumerate()
+            .zip(self.column_meta.iter_mut())
+            .filter_map(|((idx, item), meta)| {
+                if item.get_width() > meta.max_unicode_width {
+                    Some(idx)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        // It is safely to unwrap because column is already confirmed to exist
+        for idx in to_be_updated_colum_index {
+            let mut new_max = 0;
+            for cell in self.get_column_iterator(idx).expect("This should not fail") {
+                new_max = new_max.max(cell.get_width());
+            }
+            self.column_meta[idx].set_width(new_max);
+        }
+
         true
     }
 
@@ -360,6 +382,7 @@ impl VCont for VirtualData {
             row.remove_cell(&name);
         }
 
+        self.column_meta.remove(column_index);
         self.columns.remove(column_index);
 
         // If column is empty, drop all rows
@@ -712,6 +735,21 @@ impl VirtualData {
             iterate.extend(row.get_iterator(columns));
         }
         iterate.into_iter()
+    }
+
+    /// Get iterator of a column with given index
+    pub fn get_column_iterator(
+        &self,
+        column_index: usize,
+    ) -> DcsvResult<std::vec::IntoIter<&Value>> {
+        let column = &self
+            .columns
+            .get(column_index)
+            .ok_or_else(|| DcsvError::OutOfRangeError)?;
+        let acc = (0..self.get_row_count())
+            .filter_map(|idx| self.rows[idx].get_cell_value(&column.name))
+            .collect::<Vec<_>>();
+        Ok(acc.into_iter())
     }
 
     /// Get iterator of a row with given index

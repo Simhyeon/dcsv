@@ -64,6 +64,20 @@ impl Value {
             ValueType::Text => Self::Text(String::new()),
         }
     }
+
+    /// Return unicode_width of the value
+    pub fn get_width(&self) -> usize {
+        match self {
+            Value::Number(num) => {
+                if *num == 0 {
+                    0
+                } else {
+                    (num.ilog10() + 1) as usize
+                }
+            }
+            Value::Text(text) => unicode_width::UnicodeWidthStr::width(text.as_str()),
+        }
+    }
 }
 
 impl Default for Value {
