@@ -1,5 +1,8 @@
 ## TODO
 $todo_start()
+* [ ] Currently update column width precedes real update this can be
+  problematic if update fails.
+* [ ] Update width for delete_column and delte_row + apply_all vcont method
 $todo_end()
 
 ## How csv reader is different from ced?

@@ -9,12 +9,18 @@ mod testos {
     /// Read multiple csv files and check if panics
     #[test]
     fn read_csv() -> DcsvResult<()> {
+        use std::io::Write;
         let files =
             std::io::BufReader::new(std::fs::File::open("test_files").expect("Failed wow..."));
         for line in files.lines() {
             let line = line.expect("Wowzer");
             Reader::new().data_from_stream(&*std::fs::read(line).expect("Welp"))?;
         }
+
+        let data = Reader::new()
+            .use_space_delimiter(true)
+            .data_from_stream(&*std::fs::read("test_src/r4d.csv").expect("Failed"))?;
+        writeln!(std::io::stdout(), "{}", data.pretty_table("\n")).expect("FAIL");
 
         // Reader specific reads
         // Old MacOS LF Lined ending file

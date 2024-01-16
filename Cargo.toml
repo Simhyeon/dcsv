@@ -12,3 +12,4 @@ readme = "README.md"
 
 [dependencies]
 regex = "1.10.2"
+unicode-width = "0.1.11"

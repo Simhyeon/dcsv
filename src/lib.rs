@@ -33,6 +33,7 @@
 //! // Refer docs.rs for various VirtualData methods
 //! let value : &Value = data.get_cell(1,1).expect("Failed to get cell");
 mod error;
+mod meta;
 mod parser;
 mod reader;
 mod test;

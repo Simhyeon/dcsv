@@ -105,6 +105,12 @@ impl Reader {
         self
     }
 
+    /// Use space delimiter
+    pub fn use_space_delimiter(mut self, tv: bool) -> Self {
+        self.option.space_dlimiter = tv;
+        self
+    }
+
     /// Use given line delimiter instead of default one : "\n, \r\n".
     ///
     /// Only default state will detect both "\n" and "\r\n". If you set "\n" manually, "\r\n" will
@@ -134,6 +140,7 @@ impl Reader {
             let row = self.parser.feed_chunk(
                 std::mem::take(&mut row_buffer),
                 self.option.delimiter,
+                self.option.space_dlimiter,
                 self.option.consume_dquote,
                 self.option.allow_invalid_string,
             )?;
@@ -241,6 +248,7 @@ impl Reader {
             let row = self.parser.feed_chunk(
                 std::mem::take(&mut row_buffer),
                 self.option.delimiter,
+                self.option.space_dlimiter,
                 self.option.consume_dquote,
                 self.option.allow_invalid_string,
             )?;
@@ -388,6 +396,7 @@ pub struct ReaderOption {
     pub read_header: bool,
     pub consume_dquote: bool,
     pub custom_header: Vec<String>,
+    pub space_dlimiter: bool,
     pub delimiter: Option<char>,
     pub line_delimiter: Option<char>,
     pub ignore_empty_row: bool,
@@ -409,6 +418,7 @@ impl ReaderOption {
             custom_header: vec![],
             consume_dquote: false,
             delimiter: None,
+            space_dlimiter: false,
             line_delimiter: None,
             ignore_empty_row: false,
             allow_invalid_string: false,

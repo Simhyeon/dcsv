@@ -39,6 +39,7 @@ impl Parser {
         &mut self,
         chunk: Vec<u8>,
         delim: Option<char>,
+        space_dlimited: bool,
         consume_dquote: bool,
         allow_invalid_string: bool,
     ) -> DcsvResult<Option<Vec<String>>> {
@@ -49,6 +50,16 @@ impl Parser {
                 .expect("Failed to convert to string")
                 .replace("\r\n", "\n")
         };
+
+        // Simply cut whitespaces
+        if space_dlimited {
+            return Ok(Some(
+                line.split_whitespace()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>(),
+            ));
+        }
+
         let mut previous = '0';
         let mut value = std::mem::take(&mut self.remnant);
         let mut iter = line.chars().peekable();

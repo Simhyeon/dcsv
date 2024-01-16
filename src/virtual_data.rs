@@ -1,6 +1,9 @@
 //! Virtual data module
 
+use unicode_width::UnicodeWidthStr;
+
 use crate::error::{DcsvError, DcsvResult};
+use crate::meta::Meta;
 use crate::value::{Value, ValueLimiter, ValueType};
 use crate::vcont::VCont;
 use std::cmp::Ordering;
@@ -16,6 +19,7 @@ pub const SCHEMA_HEADER: &str = "column,type,default,variant,pattern";
 /// - VirtualData allows limiters to confine csv value's possible states.
 #[derive(Clone)]
 pub struct VirtualData {
+    pub column_meta: Vec<Meta>,
     pub columns: Vec<Column>,
     pub rows: Vec<Row>,
 }
@@ -30,6 +34,7 @@ impl VCont for VirtualData {
     /// Create empty virtual data
     fn new() -> Self {
         Self {
+            column_meta: vec![],
             columns: vec![],
             rows: vec![],
         }
@@ -93,6 +98,7 @@ impl VCont for VirtualData {
                 let mut next = index - 1;
                 while next >= target_index {
                     self.columns.swap(index, next);
+                    self.column_meta.swap(index, next);
 
                     // Usize specific check code
                     if next == 0 {
@@ -110,6 +116,7 @@ impl VCont for VirtualData {
                 let mut next = index + 1;
                 while next <= target_index {
                     self.columns.swap(index, next);
+                    self.column_meta.swap(index, next);
 
                     // Update index values
                     index += 1;
@@ -157,8 +164,10 @@ impl VCont for VirtualData {
         }
 
         let column = &self.columns[column_index].name;
+        let col_meta = &mut self.column_meta[column_index];
 
         for row in &mut self.rows {
+            col_meta.update_width(&value);
             row.update_cell_value(column, value.clone());
         }
         Ok(())
@@ -177,9 +186,9 @@ impl VCont for VirtualData {
             return Err(DcsvError::OutOfRangeError);
         }
 
-        let col_value_iter = self.columns.iter().zip(values.iter());
+        let col_value_iter = self.columns.iter().enumerate().zip(values.iter());
 
-        for (col, value) in col_value_iter {
+        for ((_, col), value) in col_value_iter.clone() {
             if let Some(value) = value {
                 // Early return if doesn't qualify a single element
                 if !col.limiter.qualify(value) {
@@ -191,13 +200,12 @@ impl VCont for VirtualData {
             }
         }
 
-        let col_value_iter = self.columns.iter().zip(values.iter());
-
         // It is safe to unwrap because row_number
         // was validated by is_valid_cell_coordinate method.
         let row = self.rows.get_mut(row_index).unwrap();
-        for (col, value) in col_value_iter {
+        for ((idx, col), value) in col_value_iter {
             if let Some(value) = value {
+                self.column_meta[idx].update_width(value);
                 row.update_cell_value(&col.name, value.clone())
             }
         }
@@ -222,9 +230,9 @@ impl VCont for VirtualData {
             return Err(DcsvError::OutOfRangeError);
         }
 
-        let col_value_iter = self.columns.iter().zip(values.iter());
+        let col_value_iter = self.columns.iter().enumerate().zip(values.iter());
 
-        for (col, value) in col_value_iter.clone() {
+        for ((_, col), value) in col_value_iter.clone() {
             // Early return if doesn't qualify a single element
             if !col.limiter.qualify(value) {
                 return Err(DcsvError::InvalidRowData(format!(
@@ -237,7 +245,8 @@ impl VCont for VirtualData {
         // It is safe to unwrap because row_number
         // was validated by is_valid_cell_coordinate method.
         let row = self.rows.get_mut(row_index).unwrap();
-        for (col, value) in col_value_iter {
+        for ((idx, col), value) in col_value_iter {
+            self.column_meta[idx].update_width(value);
             row.update_cell_value(&col.name, value.clone())
         }
 
@@ -258,6 +267,7 @@ impl VCont for VirtualData {
         let name = self.get_column_if_valid(x, y)?.name.to_owned();
 
         self.is_valid_column_data(y, &value)?;
+        self.column_meta[y].update_width(&value);
         self.rows[x].update_cell_value(&name, value);
 
         Ok(())
@@ -266,7 +276,7 @@ impl VCont for VirtualData {
     // THis should insert row with given column limiters
     /// Insert a row to given index
     ///
-    /// This can yield out of rnage error
+    /// This can yield out of range error
     fn insert_row(&mut self, row_index: usize, source: Option<&[Value]>) -> DcsvResult<()> {
         if row_index > self.get_row_count() {
             return Err(DcsvError::InvalidColumn(format!(
@@ -294,6 +304,13 @@ impl VCont for VirtualData {
                 new_row.insert_cell(&col.name, col.get_default_value());
             }
         }
+        for (col, value) in self
+            .column_meta
+            .iter_mut()
+            .zip(new_row.to_vector(&self.columns)?.iter())
+        {
+            col.update_width(value)
+        }
         self.rows.insert(row_index, new_row);
         Ok(())
     }
@@ -316,6 +333,9 @@ impl VCont for VirtualData {
         for row in &mut self.rows {
             row.insert_cell(&new_column.name, default_value.clone());
         }
+        let mut meta = Meta::new();
+        meta.update_width(&default_value);
+        self.column_meta.insert(column_index, meta);
         self.columns.insert(column_index, new_column);
         Ok(())
     }
@@ -395,19 +415,20 @@ impl VirtualData {
     /// This will fail if the value cannot be converted to column's type
     pub fn set_cell_from_string(&mut self, x: usize, y: usize, value: &str) -> DcsvResult<()> {
         let key_column = self.get_column_if_valid(x, y)?;
-        match key_column.column_type {
-            ValueType::Text => self.set_cell(x, y, Value::Text(value.to_string())),
-            ValueType::Number => self.set_cell(
-                x,
-                y,
-                Value::Number(value.parse().map_err(|_| {
-                    DcsvError::InvalidCellData(format!(
-                        "Given value is \"{}\" which is not a number",
-                        value
-                    ))
-                })?),
-            ),
-        }
+        let nvalue = match key_column.column_type {
+            ValueType::Text => Value::Text(value.to_string()),
+            ValueType::Number => Value::Number(value.parse().map_err(|_| {
+                DcsvError::InvalidCellData(format!(
+                    "Given value is \"{}\" which is not a number",
+                    value
+                ))
+            })?),
+        };
+
+        self.column_meta[y].update_width(&nvalue);
+        self.set_cell(x, y, nvalue)?;
+
+        Ok(())
     }
 
     /// Insert a column with given column informations
@@ -441,13 +462,15 @@ impl VirtualData {
         }
         let new_column = Column::new(column_name, column_type, limiter);
         let default_value = new_column.get_default_value();
+        let value = placeholder.unwrap_or(default_value);
         for row in &mut self.rows {
-            row.insert_cell(
-                &new_column.name,
-                placeholder.clone().unwrap_or_else(|| default_value.clone()),
-            );
+            row.insert_cell(&new_column.name, value.clone());
         }
         self.columns.insert(column_index, new_column);
+
+        let mut meta = Meta::new();
+        meta.update_width(&value);
+        self.column_meta.insert(column_index, meta);
         Ok(())
     }
 
@@ -704,6 +727,71 @@ impl VirtualData {
     }
 
     // </DRY>
+
+    pub fn pretty_table(&self, line_delimiter: &str) -> String {
+        // Currently only left align
+        #[inline]
+        fn pad(target: &str, max_width: usize) -> String {
+            let t_len = unicode_width::UnicodeWidthStr::width(target);
+            if t_len > max_width {
+                panic!(
+                    "This is a critical logic error and should not happen on sound code production"
+                );
+            }
+
+            format!("{}{}", target, " ".repeat(max_width - t_len))
+        }
+
+        let mut formatted = String::new();
+        let width_vector = self
+            .columns
+            .iter()
+            .zip(self.column_meta.iter())
+            .map(|(col, meta)| {
+                UnicodeWidthStr::width(col.name.as_str()).max(meta.max_unicode_width)
+            })
+            .collect::<Vec<_>>();
+
+        let column_row = self
+            .columns
+            .iter()
+            .zip(width_vector.iter())
+            .map(|(c, w)| pad(c.name.as_str(), *w))
+            .collect::<Vec<String>>()
+            .join(" ")
+            + line_delimiter;
+        formatted.push_str(&column_row);
+
+        let columns = self
+            .columns
+            .iter()
+            .zip(width_vector.iter())
+            .map(|(col, width)| (col.name.as_str(), *width))
+            .collect::<Vec<(&str, usize)>>();
+
+        let mut itable = self.rows.iter().peekable();
+        while let Some(row) = itable.next() {
+            let mut row_value = columns
+                .iter()
+                .map(|(col_name, width)| {
+                    pad(
+                        &row.get_cell_value(col_name)
+                            .unwrap_or(&Value::Text(String::new()))
+                            .to_string(),
+                        *width,
+                    )
+                })
+                .collect::<Vec<String>>()
+                .join(" ");
+
+            if itable.peek().is_some() {
+                row_value.push_str(line_delimiter);
+            }
+
+            formatted.push_str(&row_value);
+        }
+        formatted
+    }
 }
 
 /// to_string implementation for virtual data
