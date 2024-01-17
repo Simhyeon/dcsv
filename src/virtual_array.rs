@@ -1,6 +1,8 @@
 //! Virtual array module
 
-use crate::{vcont::VCont, Column, DcsvError, DcsvResult, Value};
+use unicode_width::UnicodeWidthStr;
+
+use crate::{meta::Meta, vcont::VCont, Column, DcsvError, DcsvResult, Value};
 use std::cmp::Ordering;
 
 /// Virtual array which contains csv information in a form of arrays.
@@ -10,6 +12,7 @@ use std::cmp::Ordering;
 /// - VirtualArray doesn't allow limiters.
 #[derive(Clone)]
 pub struct VirtualArray {
+    pub metas: Vec<Meta>,
     pub columns: Vec<Column>,
     pub rows: Vec<Vec<Value>>,
 }
@@ -23,6 +26,7 @@ impl Default for VirtualArray {
 impl VCont for VirtualArray {
     fn new() -> Self {
         Self {
+            metas: vec![],
             columns: vec![],
             rows: vec![],
         }
@@ -58,6 +62,7 @@ impl VCont for VirtualArray {
         }
 
         for row in &mut self.rows {
+            self.metas[column_index].update_width(&value);
             row[column_index] = value.clone();
         }
         Ok(())
@@ -82,6 +87,7 @@ impl VCont for VirtualArray {
         let row = &mut self.rows[row_index];
         for (idx, v) in values.iter().enumerate() {
             if let Some(new_value) = v {
+                self.metas[idx].update_width(new_value);
                 row[idx] = new_value.clone();
             }
         }
@@ -106,6 +112,9 @@ impl VCont for VirtualArray {
             let row = vec![Value::Text(String::new()); self.columns.len()];
             self.rows.insert(row_index, row);
         }
+        for (col, value) in self.metas.iter_mut().zip(self.rows[row_index].iter()) {
+            col.update_width(value)
+        }
         Ok(())
     }
 
@@ -117,7 +126,30 @@ impl VCont for VirtualArray {
         if row_count == 0 || row_count < row_index {
             return false;
         }
-        self.rows.remove(row_index);
+        let removed = self.rows.remove(row_index);
+
+        let to_be_updated_colum_index = removed
+            .iter()
+            .enumerate()
+            .zip(self.metas.iter_mut())
+            .filter_map(|((idx, item), meta)| {
+                if item.get_width() > meta.max_unicode_width {
+                    Some(idx)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        // It is safely to unwrap because column is already confirmed to exist
+        for idx in to_be_updated_colum_index {
+            // self.rows[idx]
+            let mut new_max = 0;
+            // for cell in self.get_column_iterator(idx).expect("This should not fail") {
+            //     new_max = new_max.max(cell.get_width());
+            // }
+            self.metas[idx].set_width(new_max);
+        }
         true
     }
 
@@ -133,6 +165,9 @@ impl VCont for VirtualArray {
             )));
         }
 
+        let mut meta = Meta::new();
+        meta.set_width(UnicodeWidthStr::width(column_name));
+        self.metas.insert(column_index, meta);
         self.columns
             .insert(column_index, Column::empty(column_name));
         for row in &mut self.rows {
@@ -286,6 +321,22 @@ impl VCont for VirtualArray {
 }
 
 impl VirtualArray {
+    /// Get iterator of a column with given index
+    pub fn get_column_iterator(
+        &self,
+        column_index: usize,
+    ) -> DcsvResult<std::vec::IntoIter<&Value>> {
+        if self.columns.len() <= column_index {
+            return Err(DcsvError::OutOfRangeError);
+        }
+        Ok(self
+            .rows
+            .iter()
+            .map(|s| s.get(column_index).unwrap())
+            .collect::<Vec<_>>()
+            .into_iter())
+    }
+
     /// Check if cell coordinate is not out of range
     fn is_valid_cell_coordinate(&self, x: usize, y: usize) -> bool {
         if x < self.get_row_count() && y < self.get_column_count() {
