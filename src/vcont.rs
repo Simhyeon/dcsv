@@ -58,4 +58,7 @@ pub trait VCont {
 
     /// Apply closure to all values
     fn apply_all<F: FnMut(&mut Value)>(&mut self, f: F);
+
+    /// Fully iterate cells to update max_width
+    fn update_width_global(&mut self);
 }

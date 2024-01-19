@@ -62,7 +62,7 @@ impl VCont for VirtualArray {
         }
 
         for row in &mut self.rows {
-            self.metas[column_index].update_width(&value);
+            self.metas[column_index].update_width_from_value(&value);
             row[column_index] = value.clone();
         }
         Ok(())
@@ -87,7 +87,7 @@ impl VCont for VirtualArray {
         let row = &mut self.rows[row_index];
         for (idx, v) in values.iter().enumerate() {
             if let Some(new_value) = v {
-                self.metas[idx].update_width(new_value);
+                self.metas[idx].update_width_from_value(new_value);
                 row[idx] = new_value.clone();
             }
         }
@@ -113,7 +113,7 @@ impl VCont for VirtualArray {
             self.rows.insert(row_index, row);
         }
         for (col, value) in self.metas.iter_mut().zip(self.rows[row_index].iter()) {
-            col.update_width(value)
+            col.update_width_from_value(value)
         }
         Ok(())
     }
@@ -133,7 +133,7 @@ impl VCont for VirtualArray {
             .enumerate()
             .zip(self.metas.iter_mut())
             .filter_map(|((idx, item), meta)| {
-                if item.get_width() > meta.max_unicode_width {
+                if item.get_width() >= meta.max_unicode_width {
                     Some(idx)
                 } else {
                     None
@@ -141,13 +141,14 @@ impl VCont for VirtualArray {
             })
             .collect::<Vec<_>>();
 
+        // TODO
         // It is safely to unwrap because column is already confirmed to exist
         for idx in to_be_updated_colum_index {
             // self.rows[idx]
             let mut new_max = 0;
-            // for cell in self.get_column_iterator(idx).expect("This should not fail") {
-            //     new_max = new_max.max(cell.get_width());
-            // }
+            for cell in self.get_column_iterator(idx).expect("This should not fail") {
+                new_max = new_max.max(cell.get_width());
+            }
             self.metas[idx].set_width(new_max);
         }
         true
@@ -186,6 +187,7 @@ impl VCont for VirtualArray {
             row.remove(column_index);
         }
 
+        self.metas.remove(column_index);
         self.columns.remove(column_index);
 
         // If column is empty, drop all rows
@@ -209,6 +211,7 @@ impl VCont for VirtualArray {
         if !self.is_valid_cell_coordinate(x, y) {
             return Err(DcsvError::OutOfRangeError);
         }
+        self.metas[y].update_width_from_value(&value);
         self.rows[x][y] = value;
         Ok(())
     }
@@ -228,6 +231,7 @@ impl VCont for VirtualArray {
                 let mut next = index - 1;
                 while next >= target_index {
                     self.columns.swap(index, next);
+                    self.metas.swap(index, next);
 
                     // Usize specific check code
                     if next == 0 {
@@ -245,6 +249,7 @@ impl VCont for VirtualArray {
                 let mut next = index + 1;
                 while next <= target_index {
                     self.columns.swap(index, next);
+                    self.metas.swap(index, next);
 
                     // Update index values
                     index += 1;
@@ -307,7 +312,11 @@ impl VCont for VirtualArray {
         if !self.is_valid_cell_coordinate(row_index, 0) {
             return Err(DcsvError::OutOfRangeError);
         }
+        for (idx, v) in values.iter().enumerate() {
+            self.metas[idx].update_width_from_value(v);
+        }
         self.rows[row_index] = values.to_vec();
+
         Ok(())
     }
 
@@ -315,6 +324,17 @@ impl VCont for VirtualArray {
         for row in &mut self.rows {
             for value in row {
                 f(value)
+            }
+        }
+    }
+
+    fn update_width_global(&mut self) {
+        // Row iterate
+        for idx in 0..self.get_row_count() {
+            // Column iterate
+            for cidx in 0..self.get_column_count() {
+                let width = self.get_cell(idx, cidx).unwrap().get_width();
+                self.metas[cidx].update_width(width);
             }
         }
     }

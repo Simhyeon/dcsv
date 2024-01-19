@@ -14,6 +14,7 @@ If you want higher wrapper around csv editing, use [ced](https://crates.io/crate
 - Optionally validate csv values
 - Edit csv values
 - Write to file
+- Print to table
 
 ## Basic usage
 
@@ -27,7 +28,7 @@ dcsv = "*"
 ```
 
 ```rust
-// Trait VCont is required to use most methods
+// Trait VCont is required to use many methods
 use dcsv::{Reader, VirtualData, Value, VCont};
 use std::fs::File;
 
@@ -49,11 +50,11 @@ let value : Option<&Value> = data.get_cell(1,1);
 
 ## Why?
 
-Most of the times, well known csv crate is much more performant and eaiser to
+Most of the time, well known csv crate is much more performant and eaiser to
 use because csv format doesn't change a lot. However there are cases where
 program expects undecided csv formats and contents, which means program has to
-ensure every value is compatible with expected standard. In such case, csv crate's
-type guarantee is painful to handle with.
+ensure every value is compatible with expected standard. In such case, csv
+crate's type guarantee is painful to handle with.
 
 See the examples for usages.
 

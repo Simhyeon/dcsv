@@ -19,7 +19,7 @@ pub const SCHEMA_HEADER: &str = "column,type,default,variant,pattern";
 /// - VirtualData allows limiters to confine csv value's possible states.
 #[derive(Clone)]
 pub struct VirtualData {
-    pub column_meta: Vec<Meta>,
+    pub metas: Vec<Meta>,
     pub columns: Vec<Column>,
     pub rows: Vec<Row>,
 }
@@ -34,7 +34,7 @@ impl VCont for VirtualData {
     /// Create empty virtual data
     fn new() -> Self {
         Self {
-            column_meta: vec![],
+            metas: vec![],
             columns: vec![],
             rows: vec![],
         }
@@ -98,7 +98,7 @@ impl VCont for VirtualData {
                 let mut next = index - 1;
                 while next >= target_index {
                     self.columns.swap(index, next);
-                    self.column_meta.swap(index, next);
+                    self.metas.swap(index, next);
 
                     // Usize specific check code
                     if next == 0 {
@@ -116,7 +116,7 @@ impl VCont for VirtualData {
                 let mut next = index + 1;
                 while next <= target_index {
                     self.columns.swap(index, next);
-                    self.column_meta.swap(index, next);
+                    self.metas.swap(index, next);
 
                     // Update index values
                     index += 1;
@@ -164,10 +164,10 @@ impl VCont for VirtualData {
         }
 
         let column = &self.columns[column_index].name;
-        let col_meta = &mut self.column_meta[column_index];
+        let col_meta = &mut self.metas[column_index];
 
         for row in &mut self.rows {
-            col_meta.update_width(&value);
+            col_meta.update_width_from_value(&value);
             row.update_cell_value(column, value.clone());
         }
         Ok(())
@@ -205,7 +205,7 @@ impl VCont for VirtualData {
         let row = self.rows.get_mut(row_index).unwrap();
         for ((idx, col), value) in col_value_iter {
             if let Some(value) = value {
-                self.column_meta[idx].update_width(value);
+                self.metas[idx].update_width_from_value(value);
                 row.update_cell_value(&col.name, value.clone())
             }
         }
@@ -246,7 +246,7 @@ impl VCont for VirtualData {
         // was validated by is_valid_cell_coordinate method.
         let row = self.rows.get_mut(row_index).unwrap();
         for ((idx, col), value) in col_value_iter {
-            self.column_meta[idx].update_width(value);
+            self.metas[idx].update_width_from_value(value);
             row.update_cell_value(&col.name, value.clone());
         }
 
@@ -267,7 +267,7 @@ impl VCont for VirtualData {
         let name = self.get_column_if_valid(x, y)?.name.to_owned();
 
         self.is_valid_column_data(y, &value)?;
-        self.column_meta[y].update_width(&value);
+        self.metas[y].update_width_from_value(&value);
         self.rows[x].update_cell_value(&name, value);
 
         Ok(())
@@ -305,11 +305,11 @@ impl VCont for VirtualData {
             }
         }
         for (col, value) in self
-            .column_meta
+            .metas
             .iter_mut()
             .zip(new_row.to_vector(&self.columns)?.iter())
         {
-            col.update_width(value)
+            col.update_width_from_value(value)
         }
         self.rows.insert(row_index, new_row);
         Ok(())
@@ -333,9 +333,11 @@ impl VCont for VirtualData {
         for row in &mut self.rows {
             row.insert_cell(&new_column.name, default_value.clone());
         }
+
         let mut meta = Meta::new();
-        meta.update_width(&default_value);
-        self.column_meta.insert(column_index, meta);
+        let max_width = UnicodeWidthStr::width(column_name).max(default_value.get_width());
+        meta.set_width(max_width);
+        self.metas.insert(column_index, meta);
         self.columns.insert(column_index, new_column);
         Ok(())
     }
@@ -352,9 +354,9 @@ impl VCont for VirtualData {
         let to_be_updated_colum_index = removed
             .get_iterator(&self.columns)
             .enumerate()
-            .zip(self.column_meta.iter_mut())
+            .zip(self.metas.iter_mut())
             .filter_map(|((idx, item), meta)| {
-                if item.get_width() > meta.max_unicode_width {
+                if item.get_width() >= meta.max_unicode_width {
                     Some(idx)
                 } else {
                     None
@@ -368,7 +370,7 @@ impl VCont for VirtualData {
             for cell in self.get_column_iterator(idx).expect("This should not fail") {
                 new_max = new_max.max(cell.get_width());
             }
-            self.column_meta[idx].set_width(new_max);
+            self.metas[idx].set_width(new_max);
         }
 
         true
@@ -382,7 +384,7 @@ impl VCont for VirtualData {
             row.remove_cell(&name);
         }
 
-        self.column_meta.remove(column_index);
+        self.metas.remove(column_index);
         self.columns.remove(column_index);
 
         // If column is empty, drop all rows
@@ -417,6 +419,17 @@ impl VCont for VirtualData {
             }
         }
     }
+
+    fn update_width_global(&mut self) {
+        // Row iterate
+        for idx in 0..self.get_row_count() {
+            // Column iterate
+            for cidx in 0..self.get_column_count() {
+                let width = self.get_cell(idx, cidx).unwrap().get_width();
+                self.metas[cidx].update_width(width);
+            }
+        }
+    }
 }
 
 impl VirtualData {
@@ -448,7 +461,7 @@ impl VirtualData {
             })?),
         };
 
-        self.column_meta[y].update_width(&nvalue);
+        self.metas[y].update_width_from_value(&nvalue);
         self.set_cell(x, y, nvalue)?;
 
         Ok(())
@@ -485,15 +498,16 @@ impl VirtualData {
         }
         let new_column = Column::new(column_name, column_type, limiter);
         let default_value = new_column.get_default_value();
-        let value = placeholder.unwrap_or(default_value);
+        let value = placeholder.unwrap_or(default_value.clone());
         for row in &mut self.rows {
             row.insert_cell(&new_column.name, value.clone());
         }
         self.columns.insert(column_index, new_column);
 
         let mut meta = Meta::new();
-        meta.update_width(&value);
-        self.column_meta.insert(column_index, meta);
+        let max_width = UnicodeWidthStr::width(column_name).max(default_value.get_width());
+        meta.set_width(max_width);
+        self.metas.insert(column_index, meta);
         Ok(())
     }
 
@@ -784,7 +798,7 @@ impl VirtualData {
         let width_vector = self
             .columns
             .iter()
-            .zip(self.column_meta.iter())
+            .zip(self.metas.iter())
             .map(|(col, meta)| {
                 UnicodeWidthStr::width(col.name.as_str()).max(meta.max_unicode_width)
             })

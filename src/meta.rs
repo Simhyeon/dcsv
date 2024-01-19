@@ -1,5 +1,3 @@
-use unicode_width::UnicodeWidthStr;
-
 use crate::Value;
 
 #[derive(Clone, Debug, Default)]
@@ -16,7 +14,11 @@ impl Meta {
         self.max_unicode_width = width;
     }
 
-    pub fn update_width(&mut self, target: &Value) {
+    pub fn update_width(&mut self, new_width: usize) {
+        self.max_unicode_width = self.max_unicode_width.max(new_width);
+    }
+
+    pub fn update_width_from_value(&mut self, target: &Value) {
         let new_width = target.get_width();
         self.max_unicode_width = self.max_unicode_width.max(new_width);
     }
