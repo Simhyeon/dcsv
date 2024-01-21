@@ -52,3 +52,4 @@ names.
 **New**
 
 * [x] Pretty printer method + variables
+* [x] VCONT method of print_table

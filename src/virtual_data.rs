@@ -6,6 +6,7 @@ use crate::error::{DcsvError, DcsvResult};
 use crate::meta::Meta;
 use crate::value::{Value, ValueLimiter, ValueType};
 use crate::vcont::VCont;
+use crate::CellAlignType;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
@@ -430,6 +431,95 @@ impl VCont for VirtualData {
             }
         }
     }
+
+    fn get_formatted_string(&self, line_delimiter: &str, align_type: CellAlignType) -> String {
+        let table = self.get_string_table(align_type);
+        let mut formatted = String::new();
+        let mut iter = table.iter().peekable();
+        while let Some(item) = iter.next() {
+            formatted.push_str(&item.join(" "));
+            if iter.peek().is_some() {
+                formatted.push_str(line_delimiter);
+            }
+        }
+
+        formatted
+    }
+
+    fn get_string_table(&self, align_type: crate::CellAlignType) -> Vec<Vec<String>> {
+        // Currently only left align
+        #[inline]
+        fn pad(target: &str, max_width: usize, align_type: CellAlignType) -> String {
+            if align_type == CellAlignType::None {
+                return target.to_string();
+            }
+            let t_len = unicode_width::UnicodeWidthStr::width(target);
+            if t_len > max_width {
+                panic!(
+                    "This is a critical logic error and should not happen on sound code production"
+                );
+            }
+
+            match align_type {
+                CellAlignType::Left => format!("{0}{1}", target, " ".repeat(max_width - t_len)),
+                CellAlignType::Right => format!("{1}{0}", target, " ".repeat(max_width - t_len)),
+                CellAlignType::Center => {
+                    let leading = ((max_width - t_len) as f32 / 2.0).ceil() as usize;
+                    let following = max_width - t_len - leading;
+                    format!(
+                        "{1}{0}{2}",
+                        target,
+                        " ".repeat(leading),
+                        " ".repeat(following)
+                    )
+                }
+                _ => unreachable!(),
+            }
+        }
+
+        let mut formatted = vec![];
+        let width_vector = self
+            .columns
+            .iter()
+            .zip(self.metas.iter())
+            .map(|(col, meta)| {
+                UnicodeWidthStr::width(col.name.as_str()).max(meta.max_unicode_width)
+            })
+            .collect::<Vec<_>>();
+
+        let column_row = self
+            .columns
+            .iter()
+            .zip(width_vector.iter())
+            .map(|(c, w)| pad(c.name.as_str(), *w, align_type))
+            .collect::<Vec<String>>();
+        formatted.push(column_row);
+
+        let columns = self
+            .columns
+            .iter()
+            .zip(width_vector.iter())
+            .map(|(col, width)| (col.name.as_str(), *width))
+            .collect::<Vec<(&str, usize)>>();
+
+        for row in self.rows.iter() {
+            let row_value = columns
+                .iter()
+                .map(|(col_name, width)| {
+                    pad(
+                        &row.get_cell_value(col_name)
+                            .unwrap_or(&Value::Text(String::new()))
+                            .to_string(),
+                        *width,
+                        align_type,
+                    )
+                })
+                .collect::<Vec<String>>();
+
+            formatted.push(row_value);
+        }
+        formatted
+    }
 }
 
 impl VirtualData {
@@ -776,73 +866,6 @@ impl VirtualData {
             .get(row_index)
             .ok_or(DcsvError::OutOfRangeError)?
             .get_iterator(columns))
-    }
-
-    // </DRY>
-
-    pub fn pretty_table(&self, line_delimiter: &str) -> String {
-        // Currently only left align
-        #[inline]
-        fn pad(target: &str, max_width: usize) -> String {
-            let t_len = unicode_width::UnicodeWidthStr::width(target);
-            if t_len > max_width {
-                panic!(
-                    "This is a critical logic error and should not happen on sound code production"
-                );
-            }
-
-            format!("{}{}", target, " ".repeat(max_width - t_len))
-        }
-
-        let mut formatted = String::new();
-        let width_vector = self
-            .columns
-            .iter()
-            .zip(self.metas.iter())
-            .map(|(col, meta)| {
-                UnicodeWidthStr::width(col.name.as_str()).max(meta.max_unicode_width)
-            })
-            .collect::<Vec<_>>();
-
-        let column_row = self
-            .columns
-            .iter()
-            .zip(width_vector.iter())
-            .map(|(c, w)| pad(c.name.as_str(), *w))
-            .collect::<Vec<String>>()
-            .join(" ")
-            + line_delimiter;
-        formatted.push_str(&column_row);
-
-        let columns = self
-            .columns
-            .iter()
-            .zip(width_vector.iter())
-            .map(|(col, width)| (col.name.as_str(), *width))
-            .collect::<Vec<(&str, usize)>>();
-
-        let mut itable = self.rows.iter().peekable();
-        while let Some(row) = itable.next() {
-            let mut row_value = columns
-                .iter()
-                .map(|(col_name, width)| {
-                    pad(
-                        &row.get_cell_value(col_name)
-                            .unwrap_or(&Value::Text(String::new()))
-                            .to_string(),
-                        *width,
-                    )
-                })
-                .collect::<Vec<String>>()
-                .join(" ");
-
-            if itable.peek().is_some() {
-                row_value.push_str(line_delimiter);
-            }
-
-            formatted.push_str(&row_value);
-        }
-        formatted
     }
 }
 

@@ -1,5 +1,6 @@
 //! Virtual array module
 
+use crate::CellAlignType;
 use unicode_width::UnicodeWidthStr;
 
 use crate::{meta::Meta, vcont::VCont, Column, DcsvError, DcsvResult, Value};
@@ -337,6 +338,82 @@ impl VCont for VirtualArray {
                 self.metas[cidx].update_width(width);
             }
         }
+    }
+
+    fn get_formatted_string(&self, line_delimiter: &str, align_type: CellAlignType) -> String {
+        let table = self.get_string_table(align_type);
+        let mut formatted = String::new();
+        let mut iter = table.iter().peekable();
+        while let Some(item) = iter.next() {
+            formatted.push_str(&item.join(" "));
+            if iter.peek().is_some() {
+                formatted.push_str(line_delimiter);
+            }
+        }
+
+        formatted
+    }
+
+    fn get_string_table(&self, align_type: CellAlignType) -> Vec<Vec<String>> {
+        // Currently only left align
+        #[inline]
+        fn pad(target: &str, max_width: usize, align_type: CellAlignType) -> String {
+            if align_type == CellAlignType::None {
+                return target.to_string();
+            }
+            let t_len = unicode_width::UnicodeWidthStr::width(target);
+            if t_len > max_width {
+                panic!(
+                    "This is a critical logic error and should not happen on sound code production"
+                );
+            }
+
+            match align_type {
+                CellAlignType::Left => format!("{0}{1}", target, " ".repeat(max_width - t_len)),
+                CellAlignType::Right => format!("{1}{0}", target, " ".repeat(max_width - t_len)),
+                CellAlignType::Center => {
+                    let leading = ((max_width - t_len) as f32 / 2.0).ceil() as usize;
+                    let following = max_width - leading;
+                    format!(
+                        "{1}{0}{2}",
+                        target,
+                        " ".repeat(leading),
+                        " ".repeat(following)
+                    )
+                }
+                _ => unreachable!(),
+            }
+        }
+
+        let mut formatted = vec![];
+        let width_vector = self
+            .columns
+            .iter()
+            .zip(self.metas.iter())
+            .map(|(col, meta)| {
+                UnicodeWidthStr::width(col.name.as_str()).max(meta.max_unicode_width)
+            })
+            .collect::<Vec<_>>();
+
+        let column_row = self
+            .columns
+            .iter()
+            .zip(width_vector.iter())
+            .map(|(c, w)| pad(c.name.as_str(), *w, align_type))
+            .collect::<Vec<String>>();
+        formatted.push(column_row);
+
+        for row in self.rows.iter() {
+            let row_value = self
+                .metas
+                .iter()
+                .enumerate()
+                .map(|(idx, meta)| pad(&row[idx].to_string(), meta.max_unicode_width, align_type))
+                .collect::<Vec<String>>();
+
+            formatted.push(row_value);
+        }
+        formatted
     }
 }
 

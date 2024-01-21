@@ -2,6 +2,14 @@
 
 use crate::{DcsvResult, Value};
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum CellAlignType {
+    None,
+    Left,
+    Center,
+    Right,
+}
+
 /// Generic trait over both virtual_data and virtual_array
 ///
 /// This provides some genral methods over csv value manipulation
@@ -61,4 +69,9 @@ pub trait VCont {
 
     /// Fully iterate cells to update max_width
     fn update_width_global(&mut self);
+
+    fn get_formatted_string(&self, line_delimiter: &str, align_type: CellAlignType) -> String;
+
+    /// Get table as raw string table
+    fn get_string_table(&self, align_type: CellAlignType) -> Vec<Vec<String>>;
 }

@@ -3,7 +3,7 @@
 /// Simple test module
 #[cfg(test)]
 mod testos {
-    use crate::{DcsvResult, Reader};
+    use crate::{DcsvResult, Reader, VCont};
     use std::io::BufRead;
 
     /// Read multiple csv files and check if panics
@@ -20,7 +20,12 @@ mod testos {
         let data = Reader::new()
             .use_space_delimiter(true)
             .data_from_stream(&*std::fs::read("test_src/r4d.csv").expect("Failed"))?;
-        writeln!(std::io::stdout(), "{}", data.pretty_table("\n")).expect("FAIL");
+        writeln!(
+            std::io::stdout(),
+            "{}",
+            data.get_formatted_string("\n", crate::CellAlignType::Center)
+        )
+        .expect("FAIL");
 
         // Reader specific reads
         // Old MacOS LF Lined ending file
