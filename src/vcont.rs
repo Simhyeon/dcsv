@@ -70,8 +70,9 @@ pub trait VCont {
     /// Fully iterate cells to update max_width
     fn update_width_global(&mut self);
 
+    /// Get aligned string table
     fn get_formatted_string(&self, line_delimiter: &str, align_type: CellAlignType) -> String;
 
-    /// Get table as raw string table
+    /// Get table as raw string vectors of vectors
     fn get_string_table(&self, align_type: CellAlignType) -> Vec<Vec<String>>;
 }

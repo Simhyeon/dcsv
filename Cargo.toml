@@ -11,5 +11,5 @@ repository = "https://github.com/simhyeon/dcsv"
 readme = "README.md"
 
 [dependencies]
-regex = "1.10.2"
-unicode-width = "0.1.11"
+regex = "1.11.1"
+unicode-width = "0.1.14"
